@@ -3,12 +3,5 @@ bl_info = {
     "category": "Import-Export",
 }
 
-import bpy
-
-def register():
-
-def unregister():
-
-
 if __name__ == "__main__":
     register()
