@@ -172,3 +172,9 @@ class OgreSerializer:
             if (pos != self._chunkSizeStack[-1] and self._reportChunkError):
                 print("Corrupted chunk detected !");
             self._chunkSizeStack.pop();
+
+    def enableValidation(self):
+        self._reportChunkError = True;
+
+    def disableValidation(self):
+        self._reportChunkError = False;
