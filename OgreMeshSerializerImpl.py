@@ -24,7 +24,7 @@ class OgreMeshSerializerImpl(OgreSerializer):
         OgreSerializer.__init__(self);
         self._version = "[MeshSerializer_v1.100]";
 
-    def _readGeometry(self, stream, mesh):
+    #def _readGeometry(self, stream, mesh):
 
 
     def _readMesh(self, stream, mesh, listener):

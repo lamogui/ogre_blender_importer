@@ -1,7 +1,8 @@
 from OgreMeshSerializerImpl import *
 from OgreSerializer import OgreSerializer
 from OgreMeshVersion import OgreMeshVersion
-from io import SEEK_SET;
+from io import IOBase
+from io import SEEK_SET
 
 class OgreMeshSerializer(OgreSerializer):
     """
@@ -41,13 +42,14 @@ class OgreMeshSerializer(OgreSerializer):
         OgreSerializer.__init__(self);
         self.listener=None;
         self._versionData = [];
-        self._versionData.append(_MeshVersionData(OgreMeshVersion.MESH_VERSION_1_10, "[MeshSerializer_v1.100]",OgreMeshSerializerImpl()));
+        self._versionData.append(OgreMeshSerializer._MeshVersionData(OgreMeshVersion.MESH_VERSION_1_10, "[MeshSerializer_v1.100]",OgreMeshSerializerImpl()));
 
     def importMesh(self, stream, mesh):
         assert(issubclass(type(stream),IOBase));
         self._determineEndianness(stream);
         headerID = self._readUShorts(stream,1)[0];
-        if (headerID != HEADER_CHUNK_ID):
+        print(str(headerID) + " check is " + str(OgreMeshSerializer.HEADER_CHUNK_ID));
+        if (headerID != OgreMeshSerializer.HEADER_CHUNK_ID):
             raise ValueError("File header not found");
         ver = self._readString(stream);
         stream.seek(0,SEEK_SET);
@@ -57,6 +59,7 @@ class OgreMeshSerializer(OgreSerializer):
                 impl = i.impl;
                 break;
         if (impl is None):
+            print(ver);
             raise ValueError("Cannot find serializer implementation for "
                              "mesh version " + ver);
         impl.importMesh(stream,mesh,self.listener);
@@ -66,3 +69,17 @@ class OgreMeshSerializer(OgreSerializer):
                   " using the OgreMeshUpgrade tool.");
         if (self.listener is not None):
             listener.processMeshCompleted(mesh);
+
+
+if __name__ == "__main__":
+    import sys
+    from io import open
+    if (len(sys.argv) > 1):
+        filename = sys.argv[1];
+        meshfile = open(filename,mode='rb');
+        meshSerializer = OgreMeshSerializer();
+        mesh = [];
+        meshSerializer.importMesh(meshfile,mesh);
+
+    else:
+        print("usage: python " + sys.argv[0] + " file.mesh");

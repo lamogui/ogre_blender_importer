@@ -18,19 +18,18 @@ class OgreSerializer:
     BIG_ENDIAN_HEADER_STREAM_ID = 0x0010;
 
     class Endian(Enum):
-
         ENDIAN_NATIVE = sys.byteorder;
         ENDIAN_BIG = 'big';
         ENDIAN_LITTLE = 'little';
 
     def __init__(self):
-        self._version("[Serializer_v1.00]");
-        self._endianness=ENDIAN_NATIVE;
+        self._version = "[Serializer_v1.00]";
+        self._endianness=OgreSerializer.Endian.ENDIAN_NATIVE;
         self._reportChunkError=True;
         self._chunkSizeStack=[];
 
     def _determineEndianness(self,param):
-        if issubclass(type(param, IOBase)):
+        if issubclass(type(param), IOBase):
             stream = param;
             if (stream.tell() != 0):
                 raise ValueError("OgreSerializer._determineEndianness(self,stream):"
@@ -42,14 +41,14 @@ class OgreSerializer:
                 raise ValueError("OgreSerializer._determineEndianness(self,stream):"
                                  " Couldn't read 16 bit header value from input stream");
             dest = unpack("=H",actually_read)[0];
-            if dest == HEADER_STREAM_ID:
-                self._endianness = ENDIAN_LITTLE;
-            elif dest == BIG_ENDIAN_HEADER_STREAM_ID:
-                self._endianness = ENDIAN_BIG;
+            if dest == OgreSerializer.HEADER_STREAM_ID:
+                self._endianness = OgreSerializer.Endian.ENDIAN_LITTLE;
+            elif dest == OgreSerializer.BIG_ENDIAN_HEADER_STREAM_ID:
+                self._endianness = OgreSerializer.Endian.ENDIAN_BIG;
             else:
                 raise ValueError("OgreSerializer._determineEndianness(self,stream): "
                                  "Header chunk didn't match either endian: Corrupted stream?");
-        elif param == ENDIAN_BIG or param == ENDIAN_LITTLE:
+        elif param == OgreSerializer.Endian.ENDIAN_BIG or param == OgreSerializer.Endian.ENDIAN_LITTLE:
             self._endianness = param;
         else:
             raise ValueError("OgreSerializer._determineEndianness(self,param): "
@@ -58,7 +57,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count);
-        if self._endianness==ENDIAN_LITTLE:
+        if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("?"*count), readed);
         else:
             return unpack(">" + ("?"*count), readed);
@@ -67,7 +66,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*4);
-        if self._endianness==ENDIAN_LITTLE:
+        if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("f"*count), readed);
         else:
             return unpack(">" + ("f"*count), readed);
@@ -76,7 +75,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*8);
-        if self._endianness==ENDIAN_LITTLE:
+        if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("d"*count), readed);
         else:
             return unpack(">" + ("d"*count), readed);
@@ -85,7 +84,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*2);
-        if self._endianness==ENDIAN_LITTLE:
+        if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("h"*count), readed);
         else:
             return unpack(">" + ("h"*count), readed);
@@ -94,7 +93,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*2);
-        if self._endianness==ENDIAN_LITTLE:
+        if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("H"*count), readed);
         else:
             return unpack(">" + ("H"*count), readed);
@@ -103,7 +102,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*4);
-        if self._endianness==ENDIAN_LITTLE:
+        if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("i"*count), readed);
         else:
             return unpack(">" + ("i"*count), readed);
@@ -112,7 +111,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*4);
-        if self._endianness==ENDIAN_LITTLE:
+        if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("I"*count), readed);
         else:
             return unpack(">" + ("I"*count), readed);
@@ -120,7 +119,10 @@ class OgreSerializer:
     def _readString(self, stream, size=-1):
         assert(issubclass(type(stream),IOBase));
         assert(type(size) is int);
-        return stream.readline(size);
+        prout = stream.readline(size);
+        print(prout;
+
+        return str(prout);
 
     def _readFileHeader(self, stream):
         assert(issubclass(type(stream),IOBase));
