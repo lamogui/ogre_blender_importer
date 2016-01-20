@@ -78,6 +78,7 @@ if __name__ == "__main__":
         filename = sys.argv[1];
         meshfile = open(filename,mode='rb');
         meshSerializer = OgreMeshSerializer();
+        meshSerializer.disableValidation();
         mesh = [];
         meshSerializer.importMesh(meshfile,mesh);
 

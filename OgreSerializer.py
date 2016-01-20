@@ -17,6 +17,8 @@ class OgreSerializer:
     HEADER_STREAM_ID = 0x1000;
     BIG_ENDIAN_HEADER_STREAM_ID = 0x0010;
 
+    OGRE_STREAM_TEMP_SIZE = 128;
+
     class Endian(Enum):
         ENDIAN_NATIVE = sys.byteorder;
         ENDIAN_BIG = 'big';
@@ -119,15 +121,25 @@ class OgreSerializer:
     def _readString(self, stream, size=-1):
         assert(issubclass(type(stream),IOBase));
         assert(type(size) is int);
-        prout = stream.readline(size);
-        print(prout;
-
-        return str(prout);
+        readChar=None;
+        retString = "";
+        if (size < 0):
+            while (True):
+                readChar=stream.read(1)[0];
+                if (chr(readChar)=='\n'):
+                    break;
+                else:
+                    retString += str(chr(readChar));
+        else:
+            for i in range(size):
+                readChar=stream.read(1)[0];
+                retString += str(chr(readChar));
+        return retString;
 
     def _readFileHeader(self, stream):
         assert(issubclass(type(stream),IOBase));
-        header = self._readUShorts(stream, 1)[1];
-        if (header == HEADER_STREAM_ID):
+        header = self._readUShorts(stream, 1)[0];
+        if (header == OgreSerializer.HEADER_STREAM_ID):
             ver = self._readString(stream);
             if (ver != self._version):
                 raise ValueError("OgreSerializer._readFileHeader: "
@@ -142,7 +154,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         pos = stream.tell();
         chunkid = self._readUShorts(stream,1)[0];
-        self._chunkstreamLen = _readInts(stream,1)[0];
+        self._chunkstreamLen = self._readUInts(stream,1)[0];
         if (self._chunkSizeStack):
             if (pos != self._chunkSizeStack[-1] and self._reportChunkError):
                 print("Corrupted chunk detected ! Chunk ID: " + str(chunkid));

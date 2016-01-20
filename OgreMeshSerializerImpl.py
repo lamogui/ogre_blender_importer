@@ -38,38 +38,38 @@ class OgreMeshSerializerImpl(OgreSerializer):
             except EOFError as e:
                 eof = True;
             while (not eof and \
-                  (streamID == OgreMeshFileFormat.M_GEOMETRY or \
-                   streamID == OgreMeshFileFormat.M_SUBMESH or \
-                   streamID == OgreMeshFileFormat.M_MESH_SKELETON_LINK or \
-                   streamID == OgreMeshFileFormat.M_MESH_BONE_ASSIGNMENT or \
-                   streamID == OgreMeshFileFormat.M_MESH_LOD_LEVEL or \
-                   streamID == OgreMeshFileFormat.M_MESH_BOUNDS or \
-                   streamID == OgreMeshFileFormat.M_SUBMESH_NAME_TABLE or \
-                   streamID == OgreMeshFileFormat.M_EDGE_LISTS or \
-                   streamID == OgreMeshFileFormat.M_POSES or \
-                   streamID == OgreMeshFileFormat.M_ANIMATIONS or \
+                  (streamID == OgreMeshChunkID.M_GEOMETRY or \
+                   streamID == OgreMeshChunkID.M_SUBMESH or \
+                   streamID == OgreMeshChunkID.M_MESH_SKELETON_LINK or \
+                   streamID == OgreMeshChunkID.M_MESH_BONE_ASSIGNMENT or \
+                   streamID == OgreMeshChunkID.M_MESH_LOD_LEVEL or \
+                   streamID == OgreMeshChunkID.M_MESH_BOUNDS or \
+                   streamID == OgreMeshChunkID.M_SUBMESH_NAME_TABLE or \
+                   streamID == OgreMeshChunkID.M_EDGE_LISTS or \
+                   streamID == OgreMeshChunkID.M_POSES or \
+                   streamID == OgreMeshChunkID.M_ANIMATIONS or \
                    streamID == M_TABLE_EXTREMES)):
-                if (streamID==OgreMeshFileFormat.M_GEOMETRY):
+                if (streamID==OgreMeshChunkID.M_GEOMETRY):
                     self._readGeometry(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_SUBMESH):
+                elif (streamID==OgreMeshChunkID.M_SUBMESH):
                     self._readSubMesh(stream,mesh,listener);
-                elif (streamID==OgreMeshFileFormat.M_MESH_SKELETON_LINK):
+                elif (streamID==OgreMeshChunkID.M_MESH_SKELETON_LINK):
                     self._readSkeletonLink(stream,mesh,listener);
-                elif (streamID==OgreMeshFileFormat.M_MESH_BONE_ASSIGNMENT):
+                elif (streamID==OgreMeshChunkID.M_MESH_BONE_ASSIGNMENT):
                     self._readMeshBoneAssignment(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_MESH_LOD_LEVEL):
+                elif (streamID==OgreMeshChunkID.M_MESH_LOD_LEVEL):
                     self._readMeshLodLevel(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_MESH_BOUNDS):
+                elif (streamID==OgreMeshChunkID.M_MESH_BOUNDS):
                     self._readBoundsInfos(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_SUBMESH_NAME_TABLE):
+                elif (streamID==OgreMeshChunkID.M_SUBMESH_NAME_TABLE):
                     self._readSubMeshNameTable(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_EDGE_LISTS):
+                elif (streamID==OgreMeshChunkID.M_EDGE_LISTS):
                     self._readEdgeList(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_POSES):
+                elif (streamID==OgreMeshChunkID.M_POSES):
                     self._readPoses(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_ANIMATIONS):
+                elif (streamID==OgreMeshChunkID.M_ANIMATIONS):
                     self._readAnimations(stream,mesh);
-                elif (streamID==OgreMeshFileFormat.M_TABLE_EXTREMES):
+                elif (streamID==OgreMeshChunkID.M_TABLE_EXTREMES):
                     self._readExtremes(stream,mesh);
 
                 try:
@@ -93,7 +93,7 @@ class OgreMeshSerializerImpl(OgreSerializer):
 
         eof = False;
         while (not eof):
-            if (streamID == OgreMeshFileFormat.M_MESH):
+            if (streamID == OgreMeshChunkID.M_MESH):
                 self._readMesh(stream, mesh, listener);
             try:
                 streamID = self._readChunk(stream);
