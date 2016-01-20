@@ -81,6 +81,5 @@ if __name__ == "__main__":
         meshSerializer.disableValidation();
         mesh = [];
         meshSerializer.importMesh(meshfile,mesh);
-
     else:
         print("usage: python " + sys.argv[0] + " file.mesh");
