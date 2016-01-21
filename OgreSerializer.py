@@ -159,7 +159,7 @@ class OgreSerializer:
             if (pos != self._chunkSizeStack[-1] and self._reportChunkError):
                 print("Corrupted chunk detected ! Chunk ID: " + str(chunkid));
             self._chunkSizeStack[-1] = pos + self._chunkstreamLen;
-        return id;
+        return chunkid;
 
     def _readVector3(self,stream):
         return self._readFloats(stream,3);

@@ -7,4 +7,3 @@ class OgreMeshVersion(Enum):
     MESH_VERSION_1_4 = 104;
     MESH_VERSION_1_0 = 100;
     MESH_VERSION_LEGACY = 1;
-    

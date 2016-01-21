@@ -70,6 +70,17 @@ class OgreMeshSerializer(OgreSerializer):
         if (self.listener is not None):
             listener.processMeshCompleted(mesh);
 
+    def enableValidation(self):
+        OgreSerializer.enableValidation(self);
+        for i in self._versionData:
+            i.impl.enableValidation();
+
+
+    def disableValidation(self):
+        OgreSerializer.disableValidation(self);
+        for i in self._versionData:
+            i.impl.disableValidation();
+
 
 if __name__ == "__main__":
     import sys
