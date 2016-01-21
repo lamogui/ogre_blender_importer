@@ -124,6 +124,12 @@ class OgreMeshSerializerImpl(OgreSerializer):
             self._popInnerChunk(stream);
 
 
+    def _readSubMesh(stream, mesh, listener):
+        streamID = None;
+        eof = False;
+
+        
+
     def _readMesh(self, stream, mesh, listener):
         skeletallyAnimated = self._readBools(stream,1)[0];
         eof = False;
