@@ -1,4 +1,26 @@
-from Enum import IntEnum;
+from enum import IntEnum;
+from OgreHardwareBuffer import OgreFakeHardwareBuffer
+
+class OgreVertexBuffer(OgreFakeHardwareBuffer):
+    """
+    Just a class to simulate a graphic card memory buffer
+    """
+    def __init__(self, vertexSize, numVertices):
+        OgreFakeHardwareBuffer.__init__(self);
+        self._vertexSize = vertexSize;
+        self._numVertices = numVertices;
+
+    @property
+    def vertexSize(self):
+        return self._vertexSize;
+
+    @property
+    def numVertices(self):
+        return self._numVertices;
+
+    @property
+    def sizeInBytes(self):
+        return self.vertexSize * self.numVertices;
 
 
 class OgreVertexElementSemantic(IntEnum):
@@ -26,6 +48,31 @@ class OgreVertexElementSemantic(IntEnum):
     VES_TANGENT = 9;
     # The  number of VertexElementSemantic elements (note - the first value VES_POSITION is 1)
     VES_COUNT = 9;
+
+    def toStr(ves):
+        if (ves==OgreVertexElementSemantic.VES_UNKNOWN):
+            return "VES_UNKNOWN";
+        elif (ves==OgreVertexElementSemantic.VES_POSITION):
+            return "VES_POSITION";
+        elif (ves==OgreVertexElementSemantic.VES_BLEND_WEIGHTS):
+            return "VES_BLEND_WEIGHTS";
+        elif (ves==OgreVertexElementSemantic.VES_BLEND_INDICES):
+            return "VES_BLEND_INDICES";
+        elif (ves==OgreVertexElementSemantic.VES_NORMAL):
+            return "VES_NORMAL";
+        elif (ves==OgreVertexElementSemantic.VES_DIFFUSE):
+            return "VES_DIFFUSE";
+        elif (ves==OgreVertexElementSemantic.VES_SPECULAR):
+            return "VES_SPECULAR";
+        elif (ves==OgreVertexElementSemantic.VES_TEXTURE_COORDINATES):
+            return "VES_TEXTURE_COORDINATES";
+        elif (ves==OgreVertexElementSemantic.VES_BINORMAL):
+            return "VES_BINORMAL";
+        elif (ves==OgreVertexElementSemantic.VES_TANGENT):
+            return "VES_TANGENT";
+        elif (ves==OgreVertexElementSemantic.VES_COUNT):
+            return "VES_COUNT";
+
 
 class OgreVertexElementType(IntEnum):
     """
@@ -62,6 +109,68 @@ class OgreVertexElementType(IntEnum):
     VET_UINT2 = 25;
     VET_UINT3 = 26;
     VET_UINT4 = 27;
+
+    def toStr(vet):
+        if (vet==OgreVertexElementType.VET_FLOAT1):
+            return "VET_FLOAT1";
+        elif (vet==OgreVertexElementType.VET_FLOAT2):
+            return "VET_FLOAT2";
+        elif (vet==OgreVertexElementType.VET_FLOAT3):
+            return "VET_FLOAT3";
+        elif (vet==OgreVertexElementType.VET_FLOAT4):
+            return "VET_FLOAT4";
+        elif (vet==OgreVertexElementType.VET_COLOUR):
+            return "VET_COLOUR";
+        elif (vet==OgreVertexElementType.VET_SHORT1):
+            return "VET_SHORT1";
+        elif (vet==OgreVertexElementType.VET_SHORT2):
+            return "VET_SHORT2";
+        elif (vet==OgreVertexElementType.VET_SHORT3):
+            return "VET_SHORT3";
+        elif (vet==OgreVertexElementType.VET_SHORT4):
+            return "VET_SHORT4";
+        elif (vet==OgreVertexElementType.VET_USHORT1):
+            return "VET_USHORT1";
+        elif (vet==OgreVertexElementType.VET_USHORT2):
+            return "VET_USHORT2";
+        elif (vet==OgreVertexElementType.VET_USHORT3):
+            return "VET_USHORT3";
+        elif (vet==OgreVertexElementType.VET_USHORT4):
+            return "VET_USHORT4";
+        elif (vet==OgreVertexElementType.VET_UBYTE4):
+            return "VET_UBYTE4";
+        elif (vet==OgreVertexElementType.VET_COLOUR_ABGR):
+            return "VET_COLOUR_ABGR";
+        elif (vet==OgreVertexElementType.VET_COLOUR_ARGB):
+            return "VET_COLOUR_ARGB";
+        elif (vet==OgreVertexElementType.VET_DOUBLE1):
+            return "VET_COLOUR_DOUBLE1";
+        elif (vet==OgreVertexElementType.VET_DOUBLE2):
+            return "VET_COLOUR_DOUBLE2";
+        elif (vet==OgreVertexElementType.VET_DOUBLE3):
+            return "VET_COLOUR_DOUBLE3";
+        elif (vet==OgreVertexElementType.VET_DOUBLE4):
+            return "VET_COLOUR_DOUBLE4";
+        elif (vet==OgreVertexElementType.VET_INT1):
+            return "VET_COLOUR_INT1";
+        elif (vet==OgreVertexElementType.VET_INT2):
+            return "VET_COLOUR_INT2";
+        elif (vet==OgreVertexElementType.VET_INT3):
+            return "VET_COLOUR_INT3";
+        elif (vet==OgreVertexElementType.VET_INT4):
+            return "VET_COLOUR_INT4";
+        elif (vet==OgreVertexElementType.VET_UINT1):
+            return "VET_COLOUR_UINT1";
+        elif (vet==OgreVertexElementType.VET_UINT2):
+            return "VET_COLOUR_UINT2";
+        elif (vet==OgreVertexElementType.VET_UINT3):
+            return "VET_COLOUR_UINT3";
+        elif (vet==OgreVertexElementType.VET_UINT4):
+            return "VET_COLOUR_UINT4";
+
+
+
+
 
 class OgreVertexElement:
     """
@@ -170,7 +279,7 @@ class OgreVertexElement:
             t==OgreVertexElementType.VET_USHORT1 or \
             t==OgreVertexElementType.VET_INT1 or \
             t==OgreVertexElementType.VET_UINT1):
-            return 1:
+            return 1;
         elif (t==OgreVertexElementType.VET_FLOAT2 or \
               t==OgreVertexElementType.VET_DOUBLE2 or \
               t==OgreVertexElementType.VET_SHORT2 or \
@@ -192,7 +301,7 @@ class OgreVertexElement:
               t==OgreVertexElementType.VET_INT4 or \
               t==OgreVertexElementType.VET_UINT4):
             return 4;
-         raise ValueError("OgreVertexElement.getTypeCount(type): Invalid type");
+        raise ValueError("OgreVertexElement.getTypeCount(type): Invalid type");
 
     def getBestCoulourVertexElementType():
         #Blender use opengl
@@ -204,13 +313,13 @@ class OgreVertexElement:
             self._offet == other._offset and \
             self._semantic == other._semantic and \
             self._type == other._type):
-            return True:
+            return True;
         else:
             return False;
 
 
     def getSize(self):
-        return getTypeSize(self._type);
+        return OgreVertexElement.getTypeSize(self._type);
 
 class OgreVertexDeclaration:
     """
@@ -271,7 +380,7 @@ class OgreVertexDeclaration:
 
     def findElementBySemantic(self, sem, index):
         for e in self._elementList:
-            if (e.semantic == sem and e.index == index)
+            if (e.semantic == sem and e.index == index):
                 return e;
         return None;
 
@@ -284,4 +393,40 @@ class OgreVertexDeclaration:
             if (e.source == source):
                 sz += e.getSize();
         return sz;
-    
+
+    def vertexElementLess(e1, e2):
+        if (e1.source < e2.source):
+            return True;
+        elif (e1.source == e2.source):
+            if (e1.semantic < e2.semantic):
+                return True;
+            elif (e1.semantic == e2.semantic):
+                if (e1.index < e2.index):
+                    return True;
+        return False;
+
+    def sort(self):
+        self._elementList.sort(cmp=OgreVertexDeclaration.vertexElementLess);
+
+    def closeGapInSource(self):
+        if (not self._elementList):
+            return;
+
+        self.sort();
+        raise NotImplementedError;
+
+
+class OgreVertexBufferBinding:
+    """
+    This is the legacy of Ogre code. Because ogre separate vertex declarations
+    from vertex buffer in his file. So this class allow us to associate the
+    correct declaration with the correct buffer.
+    """
+    def __init__(self):
+        self._bindingMap = {};
+
+    def setBinding(self, index, vbuffer):
+        self._bindingMap[str(index)]=vbuffer;
+
+    def unsetAllBindings(self):
+        self._bindingMap = {};

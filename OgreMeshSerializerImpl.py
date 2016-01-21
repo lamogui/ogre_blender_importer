@@ -1,5 +1,8 @@
 from OgreSerializer import OgreSerializer
 from OgreMeshFileFormat import *
+from OgreVertexData import *
+from OgreVertexBuffer import *
+
 
 
 class OgreMeshSerializerImpl(OgreSerializer):
@@ -25,18 +28,21 @@ class OgreMeshSerializerImpl(OgreSerializer):
         self._version = "[MeshSerializer_v1.100]";
 
 
-    def _readGeometryVertexElement(self,stream,mesh):
-        source = self._readUShorts(stream,1)[0];
-        vType = self._readUShorts(stream,1)[0];
-        vSemantic = self._readUShorts(stream, 1)[0];
-        offset = self._readUShorts(stream, 1)[0];
-        index = self._readUShorts(stream, 1)[0];
-        print("source " + str(source) + " vType {0:#04x}".format(vType));
-        print("vSemantic {0:#04x}".format(vSemantic).format(vSemantic));
-        print("offset " + str(offset) + " index " + str(index));
+    def _readGeometryVertexElement(self,stream,mesh,dest):
+        source = self._readUShorts(stream,1)[0]; #Buffer ogre correspondant ?
+        vType = self._readUShorts(stream,1)[0];  #Type de valeur
+        vSemantic = self._readUShorts(stream, 1)[0]; #Utilité du vertex
+        offset = self._readUShorts(stream, 1)[0]; #always 0 ?
+        index = self._readUShorts(stream, 1)[0];  #always 0 ?
+        dest.vertexDeclaration.addElement(source,offset,vType,vSemantic, index)
+        print("source: " + str(source));
+        print("type: " + OgreVertexElementType.toStr(vType));
+        print("semantic: " + OgreVertexElementSemantic.toStr(vSemantic));
+        print("offset: " + str(offset))
+        print("index: " + str(index));
 
 
-    def _readGeometryVertexDeclaration(self,stream,mesh):
+    def _readGeometryVertexDeclaration(self,stream,mesh,dest):
         self._pushInnerChunk(stream);
         streamID = None;
         eof = False;
@@ -48,7 +54,7 @@ class OgreMeshSerializerImpl(OgreSerializer):
         while (not eof and streamID == OgreMeshChunkID.M_GEOMETRY_VERTEX_ELEMENT):
             if (streamID == OgreMeshChunkID.M_GEOMETRY_VERTEX_ELEMENT):
                 print("M_GEOMETRY_VERTEX_ELEMENT");
-                self._readGeometryVertexElement(stream,mesh);
+                self._readGeometryVertexElement(stream,mesh,dest);
             try:
                 streamID = self._readChunk(stream);
                 print("streamID " + "{0:#0{1}x}".format(streamID,4) + " (offset: {0:#0x})".format(stream.tell()));
@@ -58,20 +64,38 @@ class OgreMeshSerializerImpl(OgreSerializer):
             self._backpedalChunkHeader(stream);
         self._popInnerChunk(stream);
 
-    def _readGeometryVertexBuffer(self, stream, mesh):
+    def _readGeometryVertexBuffer(self, stream, mesh, dest):
         bindIndex = self._readUShorts(stream,1)[0];
         vertexSize = self._readUShorts(stream,1)[0];
+
+        print("bind index: " + str(bindIndex));
+        print("vertex size: " + str(vertexSize));
+
         self._pushInnerChunk(stream);
         headerID = self._readChunk(stream);
         if (headerID != OgreMeshChunkID.M_GEOMETRY_VERTEX_BUFFER_DATA):
             raise ValueError("OgreMeshSerializerImpl._readGeometryVertexBuffer: Can't find vertex buffer data area");
 
-        pBuf = stream.read(vertexSize * );
-        
+        #Check that vertex size agrees
+        if (dest.vertexDeclaration.getVertexSize(bindIndex) != vertexSize):
+            raise ValueError("OgreMeshSerializerImpl._readGeometryVertexBuffer: Buffer vertex size does not agree with vertex declarationBuffer vertex size does not agree with vertex declaration");
+
+        if (OgreSerializer.Endian.ENDIAN_NATIVE != self._endianness):
+            raise NotImplementedError;
+        else:
+            hb = OgreVertexBuffer(vertexSize,dest.vertexCount);
+            hb.data = stream.read(dest.vertexCount*vertexSize);
+            print("buffered " + str(len(hb.data)) + " elements");
+            dest.vertexBufferBinding.setBinding(bindIndex,hb);
+        self._popInnerChunk(stream);
 
 
-    def _readGeometry(self, stream, mesh):
-        vertexCount = self._readUInts(stream,1)[0];
+
+
+    def _readGeometry(self, stream, mesh, dest):
+        dest.vertexStart = 0;
+        dest.vertexCount = self._readUInts(stream,1)[0];
+        print("Vertex count: " + str(dest.vertexCount));
         eof = False;
         if (not eof):
             self._pushInnerChunk(stream);
@@ -86,10 +110,10 @@ class OgreMeshSerializerImpl(OgreSerializer):
                     streamID == OgreMeshChunkID.M_GEOMETRY_VERTEX_BUFFER)):
                 if (streamID == OgreMeshChunkID.M_GEOMETRY_VERTEX_DECLARATION):
                     print("M_GEOMETRY_VERTEX_DECLARATION");
-                    self._readGeometryVertexDeclaration(stream,mesh);
+                    self._readGeometryVertexDeclaration(stream,mesh,dest);
                 elif (streamID == OgreMeshChunkID.M_GEOMETRY_VERTEX_BUFFER):
                     print("M_GEOMETRY_VERTEX_BUFFER");
-                    self._readGeometryVertexBuffer(stream,mesh);
+                    self._readGeometryVertexBuffer(stream,mesh,dest);
                 try:
                     streamID = self._readChunk(stream);
                     print("streamID " + "{0:#0{1}x}".format(streamID,4) + " (offset: {0:#0x})".format(stream.tell()));
@@ -127,7 +151,8 @@ class OgreMeshSerializerImpl(OgreSerializer):
 
                 if (streamID==OgreMeshChunkID.M_GEOMETRY):
                     print("M_GEOMETRY");
-                    self._readGeometry(stream,mesh);
+                    mesh.sharedVertexData = OgreVertexData();
+                    self._readGeometry(stream,mesh, mesh.sharedVertexData);
                 elif (streamID==OgreMeshChunkID.M_SUBMESH):
                     print("M_SUBMESH");
                     self._readSubMesh(stream,mesh,listener);
@@ -160,7 +185,8 @@ class OgreMeshSerializerImpl(OgreSerializer):
                     self._readExtremes(stream,mesh);
 
                 try:
-                    streamID == self._readChunk(stream);
+                    streamID = self._readChunk(stream);
+                    print("streamID " + "{0:#0{1}x}".format(streamID,4) + " (offset: {0:#0x})".format(stream.tell()));
                 except EOFError as e:
                     eof = True;
 

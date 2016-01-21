@@ -85,12 +85,17 @@ class OgreMeshSerializer(OgreSerializer):
 if __name__ == "__main__":
     import sys
     from io import open
+
+    class OgreMesh:
+        def __init__(self):
+            self.sharedVertexData = None;
+
     if (len(sys.argv) > 1):
         filename = sys.argv[1];
         meshfile = open(filename,mode='rb');
         meshSerializer = OgreMeshSerializer();
         meshSerializer.disableValidation();
-        mesh = [];
+        mesh = OgreMesh();
         meshSerializer.importMesh(meshfile,mesh);
     else:
         print("usage: python " + sys.argv[0] + " file.mesh");
