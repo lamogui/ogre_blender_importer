@@ -1,6 +1,24 @@
-from OgreSerializer import OgreSerializer
 from enum import Enum
+from io import open
 import re
+import sys
+
+try:
+    import bpy;
+finally:
+    print("You need to execute this script using blender");
+    print("usage: blender --background --python OgreMaterialSerializer.py -- file.material");
+
+
+try:
+    from OgreSerializer import OgreSerializer
+#For testing with blender
+except ImportError as e:
+    print("Import error: " + str(e) + " manual compilation" );
+    filename="OgreSerializer.py";
+    exec(compile(open(filename).read(), filename, 'exec'))
+
+
 
 #Enumerates the types of programs which can run on the GPU.
 class OgreGpuProgramType(Enum):
@@ -33,7 +51,7 @@ class OgreMaterialScriptProgramDefinition:
         self.syntax = "";
         self.supportsSkeletalAnimation = False;
         self.supportsMorphAnimation = False;
-        self usesVertexTextureFetch = False;
+        self.usesVertexTextureFetch = False;
         self.customParameters = {};
 
 #Struct for holding the script context while parsing.Struct for holding the script context while parsing.
@@ -57,7 +75,7 @@ class OgreMaterialScriptContext:
         self.passLev = -1;
         self.stateLev = -1;
         self.defaultParamLines = [];
-        self.lineNo = None;
+        self.lineNo = 0;
         self.filename = "";
 
 
@@ -75,6 +93,9 @@ def logParseError(error, context):
 # bool attribute_parser(params_str, context)
 
 def parseMaterial(params, context):
+    vecparams = re.split(pattern=":",string=params,maxsplit=1);
+
+
     raise NotImplementedError;
 
 def parseVertexProgram(params, context):
@@ -163,13 +184,131 @@ class OgreMaterialSerializer(OgreSerializer):
         self._scriptContext = OgreMaterialScriptContext();
         self._defaults = False;
 
-    def _invokeParser(line, parsers):
-        splitCmd = re.split(pattern=" |\t", string=line);
+    def _invokeParser(self,line, parsers):
+        splitCmd = re.split(pattern=" |\t", string=line, maxsplit=1);
+        if (splitCmd[0] in parsers):
+            cmd = "";
+            if (len(splitCmd) >= 2):
+                cmd = splitCmd[1];
+            return parsers[splitCmd[0]](cmd,self._scriptContext);
+        else:
+            logParseError("Unrecognised command: " + splitCmd[0], self._scriptContext);
+            return False;
+
 
     def _parseScriptLine(self, line):
-        if (self._scriptContext.section==OgreMaterialScriptSection.MSS_NONE):
+        section = self._scriptContext.section;
+        if (section==OgreMaterialScriptSection.MSS_NONE):
             if (line=="}"):
                 logParseError("Unexpected terminating brace.",self._scriptContext);
                 return False;
             else:
-                return _invokeParser(line,_rootAttribParsers);
+                return self._invokeParser(line,self._rootAttribParsers);
+        elif (section==OgreMaterialScriptSection.MSS_MATERIAL):
+            if (line=="}"):
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_NONE;
+                self._scriptContext.material = None;
+                self._scriptContext.passLev = -1;
+                self._scriptContext.stateLev = -1;
+                self._scriptContext.techLev = -1;
+            else:
+                return self._invokeParser(line,self._materialAttribParsers);
+        elif (section==OgreMaterialScriptSection.MSS_TECHNIQUE):
+            if (line=="}"):
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_MATERIAL;
+                self._scriptContext.passLev = -1;
+            else:
+                return self._invokeParser(line,self._techniqueAttribParsers);
+        elif (section==OgreMaterialScriptSection.MSS_PASS):
+            if (line=="}"):
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_TECHNIQUE;
+                self._scriptContext.Pass = None;
+                self._scriptContext.stateLev = -1;
+            else:
+                return self._invokeParser(line, self._passAttribParsers);
+        elif (section==OgreMaterialScriptSection.MSS_TEXTUREUNIT):
+            if (line=="}"):
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_PASS;
+                self._scriptContext.textureUnit = None;
+            else:
+                return self._invokeParser(line,self._textureUnitAttribParsers);
+        elif (section==OgreMaterialScriptSection.MSS_TEXTURESOURCE):
+            if (line=="}"):
+                #TODO END CREATING TEXTURE
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_TEXTUREUNIT;
+            else:
+                #TODO PARSE TEXTURE CUSTOM PARAMETERS
+                pass;
+        elif (section==OgreMaterialScriptSection.MSS_PROGRAM_REF):
+            if (line=="}"):
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_PASS;
+                self._scriptContext.program = None;
+            else:
+                return self._invokeParser(line,self._programRefAttribParsers);
+        elif (section==OgreMaterialScriptSection.MSS_PROGRAM):
+            if (line=="}"):
+                #TODO FINNISH PROGRAM definition
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_NONE;
+                self._scriptContext.defaultParamLines = [];
+                self._scriptContext.programDef = None;
+            else:
+                #TODO FIND AND INVOKE A custom parser
+                return self._invokeParser(line, self._programAttribParsers);
+        elif (section==OgreMaterialScriptContext.MSS_DEFAULT_PARAMETERS):
+            if (lines=="}"):
+                self._scriptContext.section = OgreMaterialScriptSection.MSS_PROGRAM;
+            else:
+                self._scriptContext.defaultParamLines.append(line);
+        return False;
+
+    def parseScript(self,stream, filename="", groupName="GLOBAL"):
+        self._scriptContext = OgreMaterialScriptContext();
+        self._scriptContext.filename = filename;
+        self._scriptContext.groupName = groupName;
+        eof = False;
+        nextIsOpenBracket = False;
+        while (not eof):
+            try:
+                line = self._readString(stream);
+                self._scriptContext.lineNo += 1;
+                if (not ((not line) or line.startswith("//"))):
+                    if (nextIsOpenBracket):
+                        if (line != "{"):
+                            logParseError("Expecting '{' but got " + line + " instead.", self._scriptContext);
+                        nextIsOpenBracket = False;
+                    else:
+                        nextIsOpenBracket = self._parseScriptLine(line);
+
+            except EOFError as e:
+                eof = True;
+        if (self._scriptContext.section != OgreMaterialScriptSection.MSS_NONE):
+            logParseError("Unexpected end of file.", self._scriptContext);
+
+
+#use the following cmdline for test with blender
+#"blender --background --python OgreMaterialSerializer.py -- OgreMaterialSerializer.py filname.material"
+
+#if __name__ == "__main__":
+#    argv = sys.argv;
+#    argv = argv[argv.index("--")+1:];  # get all args after "--"
+#    if (len(argv) > 1):
+#        filename = argv[1];
+#        matfile = open(filename,mode='rb');
+#        matserializer = OgreMaterialSerializer();
+#        matserializer.disableValidation();
+#        matserializer.parseScript(matfile, filename);
+#    else:
+#        print("usage: python " + argv[0] + " file.material");
+#
+
+if __name__ == "__main__":
+    argv = sys.argv;
+    argv = argv[argv.index("--")+1:];  # get all args after "--"
+    if (len(argv) > 0):
+        filename = argv[0];
+        matfile = open(filename,mode='rb');
+        matserializer = OgreMaterialSerializer();
+        matserializer.disableValidation();
+        matserializer.parseScript(matfile, filename);
+    else:
+        print("usage: blender --background --python OgreMaterialSerializer.py -- file.material");
