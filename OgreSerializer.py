@@ -5,6 +5,14 @@ from io import SEEK_SET;
 from struct import unpack;
 import sys;
 
+try:
+    from OgreStringUtils import OgreStringUtils
+except ImportError as e:
+    print("Import error: " + str(e) + " manual compilation" );
+    srcfile="OgreStringUtils.py";exec(compile(open(srcfile).read(), srcfile, 'exec'))
+
+
+
 class OgreSerializer:
     """
     Generic class for serialising data to / from binary stream-based files.
@@ -118,22 +126,33 @@ class OgreSerializer:
         else:
             return unpack(">" + ("I"*count), readed);
 
-    def _readString(self, stream, size=-1):
+    #From Ogre::Serializer::readString
+    def readString(stream, size=-1):
         assert(issubclass(type(stream),IOBase));
         assert(type(size) is int);
-        readChar=None;
-        retString = "";
         if (size < 0):
-            while (True):
-                readChar=stream.read(1)[0];
-                if (chr(readChar)=='\n'):
-                    break;
-                else:
-                    retString += str(chr(readChar));
+            return OgreSerializer.getLine(stream,False);
         else:
+            readChar=None;
+            retString = "";
             for i in range(size):
                 readChar=stream.read(1)[0];
                 retString += str(chr(readChar));
+            return retString;
+
+
+    #From Ogre::DataStream::getLine
+    def getLine(stream, trimAfter=True):
+        readChar=None;
+        retString = "";
+        while (True):
+            readChar=stream.read(1)[0];
+            if (chr(readChar)=='\n'):
+                break;
+            else:
+                retString += str(chr(readChar));
+        if (trimAfter):
+            retString = OgreStringUtils.trim(retString);
         return retString;
 
     def _readFileHeader(self, stream):

@@ -51,7 +51,7 @@ class OgreMeshSerializer(OgreSerializer):
         print(str(headerID) + " check is " + str(OgreMeshSerializer.HEADER_CHUNK_ID));
         if (headerID != OgreMeshSerializer.HEADER_CHUNK_ID):
             raise ValueError("File header not found");
-        ver = self._readString(stream);
+        ver = OgreSerializer.readString(stream);
         stream.seek(0,SEEK_SET);
         impl = None;
         for i in self._versionData:

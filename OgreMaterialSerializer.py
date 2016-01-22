@@ -5,20 +5,18 @@ import sys
 
 try:
     import bpy;
-finally:
+except ImportError:
     print("You need to execute this script using blender");
     print("usage: blender --background --python OgreMaterialSerializer.py -- file.material");
 
-
 try:
     from OgreSerializer import OgreSerializer
-#For testing with blender
+    from OgreStringUtils import OgreStringUtils
+
 except ImportError as e:
     print("Import error: " + str(e) + " manual compilation" );
-    filename="OgreSerializer.py";
-    exec(compile(open(filename).read(), filename, 'exec'))
-
-
+    srcfile="OgreSerializer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreStringUtils.py";exec(compile(open(srcfile).read(), srcfile, 'exec'))
 
 #Enumerates the types of programs which can run on the GPU.
 class OgreGpuProgramType(Enum):
@@ -92,11 +90,29 @@ def logParseError(error, context):
 #function def for attribute parser; return value determines if the next line should be {
 # bool attribute_parser(params_str, context)
 
+
+def parseColourValue(params,context):
+    try:
+        if (len(params)==3):
+            return (float(params[0]),float(params[1]),float(params[2]),1.0);
+        elif (len(params)==4):
+            return (float(params[0]),float(params[1]),float(params[2]),float(params[3]));
+    except TypeError:
+        logParseError("Error excepted float value",context);
+    return (1.0,1.0,1.0,1.0);
+
 def parseMaterial(params, context):
     vecparams = re.split(pattern=":",string=params,maxsplit=1);
+    if (len(vecparams) >= 2):
+        print("Material inheritance not supported yet");
+        raise NotImplementedError;
+    matname=OgreStringUtils.trim(vecparams[0]);
+    matname = re.sub("\.material$","",matname);
+    print("Creating Material: " + matname);
+    context.material = bpy.data.materials.new(matname);
+    context.section = OgreMaterialScriptSection.MSS_MATERIAL;
+    return True;
 
-
-    raise NotImplementedError;
 
 def parseVertexProgram(params, context):
     raise NotImplementedError;
@@ -108,22 +124,73 @@ def parseFragmentProgram(params, context):
     raise NotImplementedError;
 
 def parseTechnique(params, context):
-    raise NotImplementedError;
+    context.section = OgreMaterialScriptSection.MSS_TECHNIQUE;
+    print("Find technique " + params + " but this have no use for blender");
+    #TODO FIND A CORRESPONDANCE WITH CYCLES MATERIALS
+    return True;
 
 def parsePass(params, context):
-    raise NotImplementedError;
+    #TODO FIND A CORRESPONDANCE WITH CYCLES MATERIALS
+    context.section = OgreMaterialScriptSection.MSS_PASS;
+    print("Find pass " + params + " but this have no use for blender");
+    return True;
 
 def parseAmbient(params, context):
-    raise NotImplementedError;
+    vecparams = re.split(pattern=" |\t", string=params);
+    if (len(vecparams) == 1):
+        if (vecparams[0] == "vertexcolour"):
+            context.material.use_vertex_color_paint = True;
+    elif (len(vecparams) == 3 or len(vecparams) == 4):
+        color = parseColourValue(params,context);
+        #Blender seems not have an ambient color parameter
+        #context.material.ambient_color = color[:3];
+        context.material.ambient = color[3];
+    else:
+        logParseError("Bad ambient attribute, wrong number of parameters (expected 1, 3 or 4)",context);
+    return False;
 
 def parseDiffuse(params, context):
-    raise NotImplementedError;
+    vecparams = re.split(pattern=" |\t", string=params);
+    if (len(vecparams) == 1):
+        if (vecparams[0] == "vertexcolour"):
+            context.material.use_vertex_color_paint = True;
+    elif (len(vecparams) == 3 or len(vecparams) == 4):
+        color = parseColourValue(params,context);
+        context.material.diffuse_color = color[:3];
+        context.material.diffuse_intensity = color[3];
+    else:
+        logParseError("Bad diffuse attribute, wrong number of parameters (expected 1, 3 or 4)",context);
+    return False;
 
 def parseSpecular(params, context):
-    raise NotImplementedError;
+    vecparams = re.split(pattern=" |\t", string=params);
+    if (len(vecparams) == 2):
+        if (vecparams[0] == "vertexcolour"):
+            context.material.use_vertex_color_paint = True;
+        else:
+            logParseError("Bad specular attribute, double parameter statement must be 'vertexcolour <shininess>'",context);
+
+    elif (len(vecparams) == 4 or len(vecparams) == 5):
+        color = parseColourValue(params[:len(params)-1],context);
+        context.material.specular_color = color[:3];
+        context.material.specular_intensity = float(vecparams[-1]);
+    else:
+        logParseError("Bad specular attribute, wrong number of parameters (expected 2, 4 or 5)",context);
+    return False;
 
 def parseEmissive(params, context):
-    raise NotImplementedError;
+    vecparams = re.split(pattern=" |\t", string=params);
+    if (len(vecparams) == 1):
+        if (vecparams[0] == "vertexcolour"):
+            context.material.use_vertex_color_paint = True;
+    elif (len(vecparams) == 3 or len(vecparams) == 4):
+        color = parseColourValue(params,context);
+        #Blender seems not have an emissive color parameter
+        #context.material.emit_color = color[:3];
+        context.material.emit = color[3] * color[0] * color[1] * color[2];
+    else:
+        logParseError("Bad diffuse attribute, wrong number of parameters (expected 1, 3 or 4)",context);
+    return False;
 
 def parseTextureUnit(params, context):
     raise NotImplementedError;
@@ -267,9 +334,11 @@ class OgreMaterialSerializer(OgreSerializer):
         self._scriptContext.groupName = groupName;
         eof = False;
         nextIsOpenBracket = False;
+        self._scriptContext.lineNo = 1;
         while (not eof):
             try:
-                line = self._readString(stream);
+                line = OgreSerializer.getLine(stream);
+                #print ("line " + str(self._scriptContext.lineNo) + ":\"" + line + "\"");
                 self._scriptContext.lineNo += 1;
                 if (not ((not line) or line.startswith("//"))):
                     if (nextIsOpenBracket):
