@@ -2,6 +2,7 @@ from enum import Enum
 from io import open
 import re
 import sys
+import os
 
 try:
     import bpy;
@@ -114,13 +115,34 @@ def parseMaterial(params, context):
     return True;
 
 
+def parseVertexProgramRef(params, context):
+    context.section = OgreMaterialScriptSection.MSS_PROGRAM_REF;
+    #TODO FIND A CORRESPONDANCE WITH CYCLES MATERIALS
+    print("Find a vertex program reference " + params + " (not supported)")
+    return True;
+
+def parseGeometryProgramRef(params, context):
+    context.section = OgreMaterialScriptSection.MSS_PROGRAM_REF;
+    #TODO FIND A CORRESPONDANCE WITH CYCLES MATERIALS
+    print("Find a geometry program reference " + params + " (not supported)")
+    return True;
+
+def parseFragmentProgramRef(params, context):
+    context.section = OgreMaterialScriptSection.MSS_PROGRAM_REF;
+    #TODO FIND A CORRESPONDANCE WITH CYCLES MATERIALS
+    print("Find a fragment program reference " + params + " (not supported)")
+    return True;
+
 def parseVertexProgram(params, context):
+    #TODO implement
     raise NotImplementedError;
 
 def parseGeometryProgram(params, context):
+    #TODO implement
     raise NotImplementedError;
 
 def parseFragmentProgram(params, context):
+    #TODO implement
     raise NotImplementedError;
 
 def parseTechnique(params, context):
@@ -141,9 +163,11 @@ def parseAmbient(params, context):
         if (vecparams[0] == "vertexcolour"):
             context.material.use_vertex_color_paint = True;
     elif (len(vecparams) == 3 or len(vecparams) == 4):
-        color = parseColourValue(params,context);
+        color = parseColourValue(vecparams,context);
         #Blender seems not have an ambient color parameter
+        print("Parse ambient color (not used): " + str(color));
         #context.material.ambient_color = color[:3];
+        print("Parse ambient: " + str(color[3]));
         context.material.ambient = color[3];
     else:
         logParseError("Bad ambient attribute, wrong number of parameters (expected 1, 3 or 4)",context);
@@ -155,8 +179,10 @@ def parseDiffuse(params, context):
         if (vecparams[0] == "vertexcolour"):
             context.material.use_vertex_color_paint = True;
     elif (len(vecparams) == 3 or len(vecparams) == 4):
-        color = parseColourValue(params,context);
+        color = parseColourValue(vecparams,context);
+        print("Parse diffuse color: " + str(color[:3]));
         context.material.diffuse_color = color[:3];
+        print("Parse diffuse intensity (alpha): " + str(color[3]));
         context.material.diffuse_intensity = color[3];
     else:
         logParseError("Bad diffuse attribute, wrong number of parameters (expected 1, 3 or 4)",context);
@@ -169,10 +195,11 @@ def parseSpecular(params, context):
             context.material.use_vertex_color_paint = True;
         else:
             logParseError("Bad specular attribute, double parameter statement must be 'vertexcolour <shininess>'",context);
-
     elif (len(vecparams) == 4 or len(vecparams) == 5):
-        color = parseColourValue(params[:len(params)-1],context);
+        color = parseColourValue(vecparams[:len(vecparams)-1],context);
+        print("Parse specular color: " + str(color[:3]));
         context.material.specular_color = color[:3];
+        print("Parse specular intensity: " + str(float(vecparams[-1])));
         context.material.specular_intensity = float(vecparams[-1]);
     else:
         logParseError("Bad specular attribute, wrong number of parameters (expected 2, 4 or 5)",context);
@@ -183,26 +210,77 @@ def parseEmissive(params, context):
     if (len(vecparams) == 1):
         if (vecparams[0] == "vertexcolour"):
             context.material.use_vertex_color_paint = True;
-    elif (len(vecparams) == 3 or len(vecparams) == 4):
-        color = parseColourValue(params,context);
+    elif (len(vecparams) == 3):
+        color = parseColourValue(vecparams,context);
         #Blender seems not have an emissive color parameter
+        print("Parse emissive color (not used): " + str(color));
         #context.material.emit_color = color[:3];
-        context.material.emit = color[3] * color[0] * color[1] * color[2];
+        emit_intensity = color[0]*0.2126 + color[1]*0.7152 + color[2]*0.0722;
+        print("Compute emit intensity from emissive color: " + str(emit_intensity));
+        context.material.emit = emit_intensity;
+    elif (len(vecparams) == 4):
+        color = parseColourValue(vecparams,context);
+        print("Parse emissive color (not used): " + str(color));
+        emit_intensity = (color[0]*0.2126 + color[1]*0.7152 + color[2]*0.0722)*color[3];
+        print("Compute emit intensity from emissive color + alpha: " + str(emit_intensity));
+        context.material.emit = emit_intensity;
     else:
         logParseError("Bad diffuse attribute, wrong number of parameters (expected 1, 3 or 4)",context);
     return False;
 
 def parseTextureUnit(params, context):
-    raise NotImplementedError;
+    context.section = OgreMaterialScriptSection.MSS_TEXTUREUNIT;
+    if (params):
+        logParseError("Unsupported texture unit parameter yet: " + params, context);
+        context.stateLev += 1;
+        #raise NotImplementedError;
+    else:
+        context.stateLev += 1;
+    context.textureUnit = context.material.texture_slots.add();
+    return True;
 
 def parseTextureSource(params, context):
     raise NotImplementedError;
 
 def parseTexture(params, context):
-    raise NotImplementedError;
+    vecparams = re.split(pattern=" |\t", string=params);
+    if (len(vecparams)>5):
+        logParseError("Invalid texture attribute - expected only up to 5 parameters.",context);
+    if (vecparams[0] in bpy.data.textures.keys()):
+        context.textureUnit.texture = bpy.data.textures[vecparams[0]];
+    else:
+        context.textureUnit.texture = bpy.data.textures.new(vecparams[0], type = 'IMAGE');
+        img = None;
+        img_filename = os.path.join(os.getcwd(),vecparams[0]);
+        try:
+            img = bpy.data.images.load(img_filename);
+            context.textureUnit.texture.image = img;
+        except:
+            logParseError("Cannot locate the file '"+img_filename+"'",context);
+
+    for p in vecparams[1:]:
+        if (p=="1d"):
+            raise NotImplementedError;
+        elif (p=="2d"):
+            pass;
+        elif (p=="3d"):
+            raise NotImplementedError;
+        elif (p=="cubic"):
+            raise NotImplementedError;
+        elif (p=="unlimited"):
+            raise NotImplementedError;
+        elif (p=="alpha"):
+            raise NotImplementedError;
+        elif (p=="gamma"):
+            raise NotImplementedError;
+        else:
+             logParseError("Invalid texture option - "+p+".",context);
+    return False;
 
 def parseTexCoord(params, context):
-    raise NotImplementedError;
+    if (int(params) != 0):
+        logParseError("Unsupported multiple texcoord (texcoord given " + params + ")",context);
+    return False;
 
 class OgreMaterialSerializer(OgreSerializer):
 
@@ -216,6 +294,7 @@ class OgreMaterialSerializer(OgreSerializer):
         self._rootAttribParsers["vertex_program"] = parseVertexProgram;
         self._rootAttribParsers["geometry_program"] = parseGeometryProgram;
         self._rootAttribParsers["fragment_program"] = parseFragmentProgram;
+
 
         #Set up material attribute parsersSet up material attribute parsers
         self._materialAttribParsers = {};
@@ -232,6 +311,10 @@ class OgreMaterialSerializer(OgreSerializer):
         self._passAttribParsers["specular"] = parseSpecular;
         self._passAttribParsers["emissive"] = parseEmissive;
         self._passAttribParsers["texture_unit"] = parseTextureUnit;
+        self._passAttribParsers["fragment_program_ref"] = parseFragmentProgramRef;
+        self._passAttribParsers["geometry_program_ref"] = parseGeometryProgramRef;
+        self._passAttribParsers["vertex_program_ref"] = parseVertexProgramRef;
+
 
         #Set up texture unit attribute parsers
         self._textureUnitAttribParsers = {};
@@ -259,7 +342,8 @@ class OgreMaterialSerializer(OgreSerializer):
                 cmd = splitCmd[1];
             return parsers[splitCmd[0]](cmd,self._scriptContext);
         else:
-            logParseError("Unrecognised command: " + splitCmd[0], self._scriptContext);
+            print("Skip unsupported command: " + splitCmd[0]);
+            #logParseError("Unrecognised command: " + splitCmd[0], self._scriptContext);
             return False;
 
 
@@ -348,10 +432,12 @@ class OgreMaterialSerializer(OgreSerializer):
                     else:
                         nextIsOpenBracket = self._parseScriptLine(line);
 
-            except EOFError as e:
+            except (EOFError, IndexError) as e:
                 eof = True;
         if (self._scriptContext.section != OgreMaterialScriptSection.MSS_NONE):
             logParseError("Unexpected end of file.", self._scriptContext);
+        else:
+            print(filename + " loaded with success !")
 
 
 #use the following cmdline for test with blender

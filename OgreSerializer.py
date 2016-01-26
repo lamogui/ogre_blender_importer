@@ -145,12 +145,14 @@ class OgreSerializer:
     def getLine(stream, trimAfter=True):
         readChar=None;
         retString = "";
-        while (True):
+        stop=False;
+        while (not stop):
             readChar=stream.read(1)[0];
             if (chr(readChar)=='\n'):
-                break;
+                stop = True;
             else:
                 retString += str(chr(readChar));
+
         if (trimAfter):
             retString = OgreStringUtils.trim(retString);
         return retString;
