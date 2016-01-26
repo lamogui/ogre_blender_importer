@@ -7,7 +7,13 @@ as interface between binary Ogre files (.mesh, .skeleton and .material) and
 blender.
 
 #How to install
-git clone this repo inside your ""script/addon" directory of your blender
+git clone this repo inside your ""script/addon" directory of blender (in AppData or Program Files)
+
+#How to use
+Currently only the .material import is working. You can import one into blender using
+``` 
+blender --background --python OgreMaterialSerializer.py -- file.material
+```
 
 #How to contribute
 Go to https://bitbucket.org/sinbad/ogre/src
