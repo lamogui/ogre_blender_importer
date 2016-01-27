@@ -1,4 +1,4 @@
-from enum import IntEnum;
+from enum import IntEnum
 
 class OgreSkeletonChunkID(IntEnum):
     """

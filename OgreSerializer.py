@@ -37,6 +37,7 @@ class OgreSerializer:
         self._endianness=OgreSerializer.Endian.ENDIAN_NATIVE;
         self._reportChunkError=True;
         self._chunkSizeStack=[];
+        self._currentstreamLen=0;
 
     def _determineEndianness(self,param):
         if issubclass(type(param), IOBase):
@@ -174,13 +175,17 @@ class OgreSerializer:
     def _readChunk(self, stream):
         assert(issubclass(type(stream),IOBase));
         pos = stream.tell();
-        chunkid = self._readUShorts(stream,1)[0];
-        self._chunkstreamLen = self._readUInts(stream,1)[0];
-        if (self._chunkSizeStack):
-            if (pos != self._chunkSizeStack[-1] and self._reportChunkError):
-                print("Corrupted chunk detected ! Chunk ID: " + str(chunkid));
-            self._chunkSizeStack[-1] = pos + self._chunkstreamLen;
-        return chunkid;
+        try:
+            chunkid = self._readUShorts(stream,1)[0];
+            self._currentstreamLen = self._readUInts(stream,1)[0];
+            if (self._chunkSizeStack):
+                if (pos != self._chunkSizeStack[-1] and self._reportChunkError):
+                    print("Corrupted chunk detected ! Chunk ID: " + str(chunkid));
+                self._chunkSizeStack[-1] = pos + self._currentstreamLen;
+            return chunkid;
+        except (EOFError, IndexError) as e:
+            print("End of file no more chunks");
+            return None;
 
     def _readVector3(self,stream):
         return self._readFloats(stream,3);
@@ -194,6 +199,10 @@ class OgreSerializer:
 
     def _calcChunkHeaderSize(self):
         return 2 + 4;
+
+    def calcStringSize(string):
+        assert(type(string) is str);
+        return len(string) + 1;
 
     def _backpedalChunkHeader(self,stream):
         assert(issubclass(type(stream),IOBase));
