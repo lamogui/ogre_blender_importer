@@ -31,10 +31,7 @@ class OgreBone:
         if (self.parent is not None):
             self.parent.computeBlenderBone();
             self.blender_bone.head = self.parent.blender_bone.tail;
-            print("set bone head to " + str(self.blender_bone.head));
-
         self.blender_bone.tail = self.rotation * self.position + self.blender_bone.head;
-        print("set bone tail to " + str(self.blender_bone.tail));
 
     def addChild(self, child):
         assert(child.parent is None);
