@@ -162,7 +162,7 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         header = self._readUShorts(stream, 1)[0];
         if (header == OgreSerializer.HEADER_STREAM_ID):
-            ver = self._readString(stream);
+            ver = OgreSerializer.readString(stream);
             if (ver != self._version):
                 raise ValueError("OgreSerializer._readFileHeader: "
                                  "Invalid file version incompatible, file"

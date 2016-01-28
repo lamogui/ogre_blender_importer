@@ -4,6 +4,7 @@ import os
 
 try:
     import bpy;
+    import mathutils;
 except ImportError:
     print("You need to execute this script using blender");
     print("usage: blender --background --python OgreSkeletonSerializer.py -- file.skeleton");
@@ -11,13 +12,15 @@ except ImportError:
 try:
     from OgreSkeletonFileFormat import OgreSkeletonChunkID
     from OgreSerializer import OgreSerializer
+    from OgreBone import OgreBone
 
 except ImportError as e:
     print("Import error: " + str(e) + " manual compilation" );
     srcfile="OgreSkeletonFileFormat.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
     srcfile="OgreSerializer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreBone.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
 
-class OgreSkeletonVersion(Enum):
+class OgreSkeletonVersion(IntEnum):
     #/// OGRE version v1.0+
     SKELETON_VERSION_1_0 = 100;
     #/// OGRE version v1.8+
@@ -60,22 +63,48 @@ class OgreSkeletonSerializer(OgreSerializer):
         size += 3*3; #scale
         return size;
 
-    def _readBone(self,stream, skeleton):
-        name = self.readString(stream);
+    def _readBone(self,stream, skeleton, bone_map):
+        name = OgreSerializer.readString(stream);
         handle = self._readUShorts(stream,1)[0];
-        bone = skeleton.edit_bones.new(name);
-        pos = self._readVector3(stream);
-        q = self._readQuaternion(stream);
+
+        bpy_bone = skeleton.edit_bones.new(name);
+
+        bone = OgreBone(name, handle, skeleton, bpy_bone, bone_map);
+        bone_map[handle] = bone;
+
+        bone.position = mathutils.Vector(self._readVector3(stream));
+        bone.rotation = mathutils.Quaternion(self._readQuaternion(stream));
 
         self._chunkSizeStack[-1] += OgreSerializer.calcStringSize(name);
 
         #hum some ugly code <3
-        scale = (1.0,1.0,1.0);
         if (self._currentstreamLen > self._calcBoneSizeWithoutScale(skeleton,bone)):
-            scale = self._readVector3(stream);
+            bone.scale = mathutils.Vector(self._readVector3(stream));
+
+        print("Add Bone (handle: " + str(handle) + "): " + str(name));
+        print("pos: "+str(bone.position)+" rot: "+str(bone.rotation)+" scale:"+str(bone.scale));
 
 
+    def _readBoneParent(self, stream, skeleton, bone_map):
+        childHandle = self._readUShorts(stream,1)[0];
+        parentHandle = self._readUShorts(stream,1)[0];
 
+        try:
+            parent = bone_map[parentHandle];
+            child = bone_map[childHandle];
+            parent.addChild(child);
+            print("Create bone link [parent: " + parent.name + " (handle: "+str(parentHandle)+ "), child: " + child.name +" (handle:"+str(childHandle)+")]" );
+        except IndexError as e:
+            print(str(e) + " Attempt to create link for bone that doesn't exists");
+
+
+    def setWorkingVersion(self, ver):
+        if (ver == OgreSkeletonVersion.SKELETON_VERSION_1_0):
+            self._version = "[Serializer_v1.10]";
+        elif (ver == OgreSkeletonVersion.SKELETON_VERSION_1_8):
+            self._version = "[Serializer_v1.80]";
+        else:
+            raise ValueError("Invalid Skeleton serializer version " + str(ver));
 
     def importSkeleton(self, stream, filename=None):
         if (filename is None):
@@ -91,12 +120,29 @@ class OgreSkeletonSerializer(OgreSerializer):
         self._pushInnerChunk(stream);
 
         filename = os.path.basename(filename);
-        skeleton_name = os.path.splitext(filename);
+        skeleton_name = os.path.splitext(filename)[0];
+
+        skeleton = None;
+        skeleton_object = None;
+
 
         if skeleton_name in bpy.data.armatures.keys():
             raise ValueError(skeleton_name + " already exists in blender");
         else:
-            skeleton_name = bpy.data.armatures.new(name=skeleton_name);
+            print("Create armature from skeleton: " + skeleton_name);
+            skeleton = bpy.data.armatures.new(skeleton_name);
+            #to be able to edit the armature we need to got in edit mode.
+            skeleton_object = bpy.data.objects.new(skeleton_name, skeleton);
+            skeleton_object.show_x_ray = True;
+            scene = bpy.context.scene;
+            scene.objects.link(skeleton_object);
+            scene.objects.active=skeleton_object;
+            scene.update();
+            #bugged ? bpy.ops.object.object.mode_set(mode='EDIT');
+            bpy.ops.object.editmode_toggle();
+
+        skeleton.show_names = True;
+        bone_map = {};
 
         streamID = self._readChunk(stream);
         while (streamID is not None):
@@ -104,9 +150,9 @@ class OgreSkeletonSerializer(OgreSerializer):
                 blendMode = self._readUShorts(stream,1)[0];
                 print("Find blendMode: " + str(blendMode) + " (not used)");
             elif (streamID==OgreSkeletonChunkID.SKELETON_BONE):
-                self._readBone(stream, skeleton);
+                self._readBone(stream, skeleton, bone_map);
             elif (streamID==OgreSkeletonChunkID.SKELETON_BONE_PARENT):
-                self._readBoneParent(stream, skeleton);
+                self._readBoneParent(stream, skeleton, bone_map);
             elif (streamID==OgreSkeletonChunkID.SKELETON_ANIMATION):
                 self._readAnimation(stream,skeleton);
             elif (streamID==OgreSkeletonChunkID.SKELETON_ANIMATION_LINK):
@@ -115,3 +161,16 @@ class OgreSkeletonSerializer(OgreSerializer):
             streamID=self._readChunk(stream);
         #TODO skeleton set binding possible
         self._popInnerChunk(stream);
+
+if __name__ == "__main__":
+    argv = sys.argv;
+    argv = argv[argv.index("--")+1:];  # get all args after "--"
+    if (len(argv) > 0):
+        filename = argv[0];
+        skeletonfile = open(filename,mode='rb');
+        skeletonserializer = OgreSkeletonSerializer();
+        skeletonserializer.disableValidation();
+        skeletonserializer.setWorkingVersion(OgreSkeletonVersion.SKELETON_VERSION_LATEST);
+        skeletonserializer.importSkeleton(skeletonfile);
+    else:
+        print("usage: blender --background --python OgreSkeletonSerializer.py -- file.skeleton");
