@@ -49,6 +49,7 @@ class OgreSkeletonSerializer(OgreSerializer):
     def __init__(self):
         OgreSerializer.__init__(self);
         self._version = "[Unknown]";
+        self.invertYZ = True;
 
     def _calcBoneSizeWithoutScale(self, skeleton, bone):
         size = OgreSkeletonSerializer.SSTREAM_OVERHEAD_SIZE;
@@ -80,7 +81,7 @@ class OgreSkeletonSerializer(OgreSerializer):
         bone_map[handle] = bone;
 
         bone.position = mathutils.Vector(self._readVector3(stream));
-        bone.rotation = mathutils.Quaternion(self._readQuaternion(stream));
+        bone.rotation = mathutils.Quaternion(self._readBlenderQuaternion(stream));
 
         self._chunkSizeStack[-1] += OgreSerializer.calcStringSize(name);
 
@@ -114,7 +115,7 @@ class OgreSkeletonSerializer(OgreSerializer):
             tracks[i].keyframe_points[keyframe_index].interpolation = 'LINEAR';
 
 
-        rot = self._readQuaternion(stream);
+        rot = self._readBlenderQuaternion(stream);
         trans = self._readVector3(stream);
 
         time *= 60.0; #sec to frame at 60 fps

@@ -192,8 +192,12 @@ class OgreSerializer:
     def _readVector3(self,stream):
         return self._readFloats(stream,3);
 
-    def _readQuaternion(self,stream):
+    def _readOgreQuaternion(self,stream):
         return self._readFloats(stream,4);
+
+    def _readBlenderQuaternion(self,stream):
+        (x,y,z,w) = self._readOgreQuaternion(stream);
+        return (w,x,y,z);
 
     def _pushInnerChunk(self, stream):
         assert(issubclass(type(stream),IOBase));
