@@ -109,32 +109,39 @@ class OgreSkeletonSerializer(OgreSerializer):
 
     def _readKeyFrame(self, stream, tracks,skeleton, keyframe_index):
         time = self._readFloats(stream, 1)[0];
-        for i in range(10):
+        for i in range(7):
             tracks[i].keyframe_points.add(1);
+            tracks[i].keyframe_points[keyframe_index].interpolation = 'LINEAR';
+
 
         rot = self._readQuaternion(stream);
         trans = self._readVector3(stream);
 
         time *= 60.0; #sec to frame at 60 fps
 
-        #rotation
-        tracks[0].keyframe_points[keyframe_index].co = (time , rot[0]);
-        tracks[1].keyframe_points[keyframe_index].co = (time , rot[1]);
-        tracks[2].keyframe_points[keyframe_index].co = (time , rot[2]);
-        tracks[3].keyframe_points[keyframe_index].co = (time , rot[3]);
-
         #position
-        tracks[4].keyframe_points[keyframe_index].co = (time, trans[0]);
-        tracks[5].keyframe_points[keyframe_index].co = (time, trans[1]);
-        tracks[6].keyframe_points[keyframe_index].co = (time, trans[2]);
+        tracks[0].keyframe_points[keyframe_index].co = (time, trans[0]);
+        tracks[1].keyframe_points[keyframe_index].co = (time, trans[1]);
+        tracks[2].keyframe_points[keyframe_index].co = (time, trans[2]);
+
+        #rotation
+        tracks[3].keyframe_points[keyframe_index].co = (time , rot[0]);
+        tracks[4].keyframe_points[keyframe_index].co = (time , rot[1]);
+        tracks[5].keyframe_points[keyframe_index].co = (time , rot[2]);
+        tracks[6].keyframe_points[keyframe_index].co = (time , rot[3]);
+
 
         #hum ugly again <3
         if (self._currentstreamLen > self._calcKeyFrameSizeWithoutScale(skeleton,tracks)):
             scale = self._readVector3(stream);
             #scale
-            trans[7].keyframe_points[keyframe_index].co = (time, scale[0]);
-            trans[8].keyframe_points[keyframe_index].co = (time, scale[1]);
-            trans[9].keyframe_points[keyframe_index].co = (time, scale[2]);
+        #    trans[7].keyframe_points[keyframe_index].co = (time, scale[0]);
+        #    trans[8].keyframe_points[keyframe_index].co = (time, scale[1]);
+        #    trans[9].keyframe_points[keyframe_index].co = (time, scale[2]);
+        #else:
+    #        trans[7].keyframe_points[keyframe_index].co = (time, 1.0);
+#            trans[8].keyframe_points[keyframe_index].co = (time, 1.0);
+#            trans[9].keyframe_points[keyframe_index].co = (time, 1.0);
 
     def _readAnimationTrack(self,stream,skeleton,bone_map,anim):
         boneHandle = self._readShorts(stream,1)[0];
@@ -151,9 +158,18 @@ class OgreSkeletonSerializer(OgreSerializer):
         # 7: scale.x
         # 8: scale.y
         # 9: scale.z
-        for i in range(10):
-            print("Adding track: " + targetBone.name);
-            tracks.append(anim.fcurves.new(data_path=targetBone.name,index=i));
+
+        basename = 'pose.bones["' + targetBone.name + '"]';
+        tracks.append(anim.fcurves.new(data_path=basename+".location",index=0,action_group=targetBone.name));
+        tracks.append(anim.fcurves.new(data_path=basename+".location",index=1,action_group=targetBone.name));
+        tracks.append(anim.fcurves.new(data_path=basename+".location",index=2,action_group=targetBone.name));
+        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=0,action_group=targetBone.name));
+        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=1,action_group=targetBone.name));
+        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=2,action_group=targetBone.name));
+        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=3,action_group=targetBone.name));
+        #tracks.append(anim.fcurves.new(data_path=basename+".scale",index=0,action_group=targetBone.name));
+        #tracks.append(anim.fcurves.new(data_path=basename+".scale",index=1,action_group=targetBone.name));
+        #tracks.append(anim.fcurves.new(data_path=basename+".scale",index=2,action_group=targetBone.name));
 
         self._pushInnerChunk(stream);
         streamID = self._readChunk(stream);

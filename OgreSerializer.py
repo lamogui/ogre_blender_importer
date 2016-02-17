@@ -104,6 +104,8 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*2);
+        if (len(readed) != 2):
+            return None;
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("H"*count), readed);
         else:
@@ -183,7 +185,7 @@ class OgreSerializer:
                     print("Corrupted chunk detected ! Chunk ID: " + str(chunkid));
                 self._chunkSizeStack[-1] = pos + self._currentstreamLen;
             return chunkid;
-        except (EOFError, IndexError) as e:
+        except (EOFError, IndexError, TypeError) as e:
             print("End of file no more chunks");
             return None;
 
