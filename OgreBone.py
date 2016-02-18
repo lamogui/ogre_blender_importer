@@ -36,7 +36,7 @@ class OgreBone:
     def computeBlenderBone(self):
         if (self.parent is not None):
             self.parent.computeBlenderBone();
-            self.rotation = self.local_rotation * self.parent.rotation;
+            self.rotation = self.parent.rotation * self.local_rotation;
             self.blender_bone.head = self.parent.blender_bone.tail;
         else:
             self.rotation = self.local_rotation;

@@ -13,12 +13,12 @@ git clone this repo inside your ""script/addon" directory of blender (in AppData
 Currently only the .material and .skeleton import is working.
 You can import one .material into blender using
 ```
-blender --background --python OgreMaterialSerializer.py -- file.material
+blender --python OgreMaterialSerializer.py -- file.material
 ```
 
 Same for .skeleton
 ```
-blender --background --python OgreSkeletonSerializer.py -- file.skeleton
+blender --python OgreSkeletonSerializer.py -- file.skeleton
 ```
 
 
@@ -26,3 +26,13 @@ blender --background --python OgreSkeletonSerializer.py -- file.skeleton
 Go to https://bitbucket.org/sinbad/ogre/src
 Translate the code of Ogre::MeshSerializer, Ogre::SkeletonSerializer and
 Ogre::MaterialSerializer into python3 for blender (bpy).
+
+
+#TODO
+ * Correctly load animations (maths are buggy at the moment)
+ * Support scale import for bone
+ * Import .mesh
+ * Import more .material parameters
+ * Support older versions for .mesh and .Skeleton
+ * Support Ogre2 Mesh and Skeletons
+ * Mesh, Skeleton and Material exporters
