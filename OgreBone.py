@@ -31,6 +31,8 @@ class OgreBone:
         self.blender_bone.use_inherit_scale = True;
         self.blender_bone.use_local_location = True;
 
+        self.blender_bone.head = mathutils.Vector((0.0,0.0,0.0));
+        self.blender_bone.tail = self.local_position;
 
 
     def computeBlenderBone(self):
@@ -38,9 +40,7 @@ class OgreBone:
             self.parent.computeBlenderBone();
             self.rotation = self.parent.rotation * self.local_rotation;
             self.blender_bone.head = self.parent.blender_bone.tail;
-        else:
-            self.rotation = self.local_rotation;
-        self.blender_bone.tail = self.rotation * self.local_position + self.blender_bone.head;
+            self.blender_bone.tail = self.rotation * self.local_position + self.blender_bone.head;
 
     def addChild(self, child):
         assert(child.parent is None);
