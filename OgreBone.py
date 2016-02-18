@@ -18,20 +18,29 @@ class OgreBone:
         self.name = name;
         self.handle = handle;
         self.creator = creator;
-        self.position = mathutils.Vector((0.0,0.0,0.0));
-        self.rotation = mathutils.Quaternion((1.0,0.0,0.0,0.0));
-        self.scale = mathutils.Vector((1.0,1.0,1.0));
+        self.local_position = mathutils.Vector((0.0,0.0,0.0));
+        self.local_rotation = mathutils.Quaternion((1.0,0.0,0.0,0.0));
+        self.local_scale = mathutils.Vector((1.0,1.0,1.0));
+        self.rotation = self.local_rotation;
         self.blender_bone = blender_bone;
         self.bone_map = bone_map;
         self.childs = [];
         self.parent = None;
 
+        self.blender_bone.use_inherit_rotation = True;
+        self.blender_bone.use_inherit_scale = True;
+        self.blender_bone.use_local_location = True;
+
+
 
     def computeBlenderBone(self):
         if (self.parent is not None):
             self.parent.computeBlenderBone();
+            self.rotation = self.local_rotation * self.parent.rotation;
             self.blender_bone.head = self.parent.blender_bone.tail;
-        self.blender_bone.tail = self.rotation * self.position + self.blender_bone.head;
+        else:
+            self.rotation = self.local_rotation;
+        self.blender_bone.tail = self.rotation * self.local_position + self.blender_bone.head;
 
     def addChild(self, child):
         assert(child.parent is None);

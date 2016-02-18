@@ -57,3 +57,14 @@ docs/_build/
 
 # PyBuilder
 target/
+
+
+#test files
+*.skeleton
+*.dds
+*.material
+*.mesh
+Blank
+
+#backup
+*~

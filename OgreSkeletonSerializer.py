@@ -50,6 +50,7 @@ class OgreSkeletonSerializer(OgreSerializer):
         OgreSerializer.__init__(self);
         self._version = "[Unknown]";
         self.invertYZ = True;
+        self.scale_fail_import = 0;
 
     def _calcBoneSizeWithoutScale(self, skeleton, bone):
         size = OgreSkeletonSerializer.SSTREAM_OVERHEAD_SIZE;
@@ -80,14 +81,16 @@ class OgreSkeletonSerializer(OgreSerializer):
         bone = OgreBone(name, handle, skeleton, bpy_bone, bone_map);
         bone_map[handle] = bone;
 
-        bone.position = mathutils.Vector(self._readVector3(stream));
-        bone.rotation = mathutils.Quaternion(self._readBlenderQuaternion(stream));
+        bone.local_position = mathutils.Vector(self._readVector3(stream));
+        bone.local_rotation = mathutils.Quaternion(self._readBlenderQuaternion(stream));
 
         self._chunkSizeStack[-1] += OgreSerializer.calcStringSize(name);
 
         #hum some ugly code <3
         if (self._currentstreamLen > self._calcBoneSizeWithoutScale(skeleton,bone)):
-            bone.scale = mathutils.Vector(self._readVector3(stream));
+            bone.local_scale = mathutils.Vector(self._readVector3(stream));
+            self.scale_fail_import += 1;
+            print("Warning scale " + str(bone.local_scale) + " will not be used");
 
         bone.computeBlenderBone();
 
@@ -239,6 +242,7 @@ class OgreSkeletonSerializer(OgreSerializer):
             else:
                 raise ValueError("Cannot determine the filename of the stream please add filename parameter")
 
+        self.scale_fail_import = 0;
         self._determineEndianness(stream);
         self._readFileHeader(stream);
         self._pushInnerChunk(stream);
@@ -286,6 +290,10 @@ class OgreSkeletonSerializer(OgreSerializer):
             streamID=self._readChunk(stream);
         #TODO skeleton set binding possible
         self._popInnerChunk(stream);
+        if (self.scale_fail_import>0):
+            print("Warning: scale import is not supported yet " + str(self.scale_fail_import) + " bones may have incorrectly loaded");
+
+
 
 if __name__ == "__main__":
     argv = sys.argv;
