@@ -145,7 +145,11 @@ class OgreSkeletonSerializer(OgreSerializer):
                 t[i].keyframe_points[-1].interpolation = 'LINEAR';
 
 
+
         rot = mathutils.Quaternion(self._readBlenderQuaternion(stream));
+        #r = mathutils.Quaternion((rot.w,-rot.x,rot.y,rot.z));
+        #rot = r;
+
         trans = self._readVector3(stream);
 
         if (not self.isNullVector(trans)):

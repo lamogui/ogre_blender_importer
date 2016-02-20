@@ -45,7 +45,9 @@ class OgreBone:
             self.blender_bone.head = self.parent.blender_bone.tail;
             self.blender_bone.tail = self.rotation * self.local_position + self.blender_bone.head;
             self.gamma = OgreBone.getRotation(self.local_position,mathutils.Vector((0,1,0)));
-            #self.parent_offset_rotation = self.gamma;# * self.alpha;
+            self.gamma = OgreBone.getRotation(mathutils.Vector((1,0,0)),mathutils.Vector((0,1,0)));
+
+            #self.parent_offset_rotation = self.gamma.inverted();# * self.alpha;
             #self.parent_offset_rotation = OgreBone.getRotation(mathutils.Vector((0,1,0)),self.local_position);
         else:
             self.blender_bone.head = mathutils.Vector((0,0,0));
@@ -68,7 +70,6 @@ class OgreBone:
                 axis = mathutils.Vector((0,0,1)).cross(v1);
             axis.normalize();
             return mathutils.Quaternion(axis,math.pi);
-
         s = math.sqrt((1.0+d)*2.0);
         invs = 1.0/s;
         c = v1.cross(v2);
