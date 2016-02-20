@@ -36,12 +36,16 @@ class OgreBone:
 
 
     def computeBlenderBone(self):
+        #Switch to blender repere
+        self.alpha = OgreBone.getRotation(mathutils.Vector((0,1,0)),self.local_position);
+
         if (self.parent is not None):
             self.parent.computeBlenderBone();
-            self.rotation = self.parent.rotation * self.local_rotation;
+            self.rotation = self.parent.rotation * self.parent.local_rotation;
             self.blender_bone.head = self.parent.blender_bone.tail;
             self.blender_bone.tail = self.rotation * self.local_position + self.blender_bone.head;
-            self.parent_offset_rotation = self.parent.local_rotation.inverted()
+            self.gamma = OgreBone.getRotation(self.local_position,mathutils.Vector((0,1,0)));
+            #self.parent_offset_rotation = self.gamma;# * self.alpha;
             #self.parent_offset_rotation = OgreBone.getRotation(mathutils.Vector((0,1,0)),self.local_position);
         else:
             self.blender_bone.head = mathutils.Vector((0,0,0));
