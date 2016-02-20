@@ -46,11 +46,34 @@ class OgreSkeletonSerializer(OgreSerializer):
     SSTREAM_OVERHEAD_SIZE = 2 + 4;
     HEADER_STREAM_ID_EXT = 0x1000;
 
+
+
+    def isDefaultScale(self, vec3):
+        assert(len(vec3) == 3)
+        for v in vec3:
+            if (v>1.0+self.epsilon or v <1.0-self.epsilon):
+                return False;
+        return True;
+
+    def isNullVector(self, vec3):
+        assert(len(vec3) == 3)
+        for v in vec3:
+            if (v > self.epsilon or v <-self.epsilon):
+                return False;
+        return True;
+
     def __init__(self):
         OgreSerializer.__init__(self);
         self._version = "[Unknown]";
         self.invertYZ = True;
-        self.scale_fail_import = 0;
+        self.not_imported_bone_scales = {};
+        self.not_imported_animation_translations = set();
+        self.epsilon = 0.001;
+        self.framerate = 60.0; #import animation at 60 fps
+        self._ogreBoneMap = {}; #Handle to OgreBone
+        self._animationBoneMap = {}; #OgreBone names to Real blender bones to animate
+        self._nameHandleMap = {} #name to handle
+
 
     def _calcBoneSizeWithoutScale(self, skeleton, bone):
         size = OgreSkeletonSerializer.SSTREAM_OVERHEAD_SIZE;
@@ -72,14 +95,15 @@ class OgreSkeletonSerializer(OgreSerializer):
         size += 4*3; #translation
         return size;
 
-    def _readBone(self,stream, skeleton, bone_map):
+    def _readBone(self,stream, skeleton):
         name = OgreSerializer.readString(stream);
         handle = self._readUShorts(stream,1)[0];
 
         bpy_bone = skeleton.edit_bones.new(name);
+        bone = OgreBone(name, handle, skeleton, bpy_bone);
 
-        bone = OgreBone(name, handle, skeleton, bpy_bone, bone_map);
-        bone_map[handle] = bone;
+        self._ogreBoneMap[handle] = bone;
+        self._nameHandleMap[name] = handle;
 
         bone.local_position = mathutils.Vector(self._readVector3(stream));
         bone.local_rotation = mathutils.Quaternion(self._readBlenderQuaternion(stream));
@@ -88,99 +112,120 @@ class OgreSkeletonSerializer(OgreSerializer):
 
         #hum some ugly code <3
         if (self._currentstreamLen > self._calcBoneSizeWithoutScale(skeleton,bone)):
-            bone.local_scale = mathutils.Vector(self._readVector3(stream));
-            self.scale_fail_import += 1;
-            print("Warning scale " + str(bone.local_scale) + " will not be used");
-
-        bone.computeBlenderBone();
+            scale = self._readVector3(stream);
+            bone.local_scale = mathutils.Vector(scale);
+            if (not self.isDefaultScale(scale)):
+                self.not_imported_bone_scales[name] = bone.local_scale;
 
         print("Add Bone (handle: " + str(handle) + "): " + str(name));
-        #print("pos: "+str(bone.position)+" rot: "+str(bone.rotation)+" scale:"+str(bone.scale));
+        #print("pos: "+str(bone.local_position)+" rot: "+str(bone.local_rotation)+" scale:"+str(bone.local_scale));
 
 
-    def _readBoneParent(self, stream, skeleton, bone_map):
+    def _readBoneParent(self, stream, skeleton):
         childHandle = self._readUShorts(stream,1)[0];
         parentHandle = self._readUShorts(stream,1)[0];
 
         try:
-            parent = bone_map[parentHandle];
-            child = bone_map[childHandle];
+            parent = self._ogreBoneMap[parentHandle];
+            child = self._ogreBoneMap[childHandle];
             parent.addChild(child);
             #print("Create bone link [parent: " + parent.name + " (handle: "+str(parentHandle)+ "), child: " + child.name +" (handle:"+str(childHandle)+")]" );
         except IndexError as e:
             print(str(e) + " Attempt to create link for bone that doesn't exists");
 
 
-    def _readKeyFrame(self, stream, tracks,skeleton, keyframe_index):
-        time = self._readFloats(stream, 1)[0];
-        for i in range(7):
-            tracks[i].keyframe_points.add(1);
-            tracks[i].keyframe_points[keyframe_index].interpolation = 'LINEAR';
+    def _readKeyFrame(self, stream, tracks,skeleton ,anim, q):
+        time = self._readFloats(stream, 1)[0] * self.framerate;
+
+        #Add rotation/scale necessary
+
+        for i in range(3,10):
+            for t in tracks:
+                t[i].keyframe_points.add(1);
+                t[i].keyframe_points[-1].interpolation = 'LINEAR';
 
 
-        rot = self._readBlenderQuaternion(stream);
+        rot = mathutils.Quaternion(self._readBlenderQuaternion(stream));
         trans = self._readVector3(stream);
 
-        time *= 60.0; #sec to frame at 60 fps
+        if (not self.isNullVector(trans)):
+            if (anim.name not in self.not_imported_animation_translations):
+                self.not_imported_animation_translations.add(anim.name);
 
-        #position
-        tracks[0].keyframe_points[keyframe_index].co = (time, trans[0]);
-        tracks[1].keyframe_points[keyframe_index].co = (time, trans[1]);
-        tracks[2].keyframe_points[keyframe_index].co = (time, trans[2]);
+        for index,t in enumerate(tracks):
+            #position
+            #t[0].keyframe_points[-1].co = (time, trans[0]);
+            #t[1].keyframe_points[-1].co = (time, trans[1]);
+            #t[2].keyframe_points[-1].co = (time, trans[2]);
 
-        #rotation
-        tracks[3].keyframe_points[keyframe_index].co = (time , rot[0]);
-        tracks[4].keyframe_points[keyframe_index].co = (time , rot[1]);
-        tracks[5].keyframe_points[keyframe_index].co = (time , rot[2]);
-        tracks[6].keyframe_points[keyframe_index].co = (time , rot[3]);
+            #rotation
+            crot = rot * q[index];
+            t[3].keyframe_points[-1].co = (time , crot.w);
+            t[4].keyframe_points[-1].co = (time , crot.x);
+            t[5].keyframe_points[-1].co = (time , crot.y);
+            t[6].keyframe_points[-1].co = (time , crot.z);
 
 
         #hum ugly again <3
         if (self._currentstreamLen > self._calcKeyFrameSizeWithoutScale(skeleton,tracks)):
             scale = self._readVector3(stream);
-            #scale
-        #    trans[7].keyframe_points[keyframe_index].co = (time, scale[0]);
-        #    trans[8].keyframe_points[keyframe_index].co = (time, scale[1]);
-        #    trans[9].keyframe_points[keyframe_index].co = (time, scale[2]);
-        #else:
-    #        trans[7].keyframe_points[keyframe_index].co = (time, 1.0);
-#            trans[8].keyframe_points[keyframe_index].co = (time, 1.0);
-#            trans[9].keyframe_points[keyframe_index].co = (time, 1.0);
+            for t in tracks:
+                t[7].keyframe_points[-1].co = (time, scale[0]);
+                t[8].keyframe_points[-1].co = (time, scale[1]);
+                t[9].keyframe_points[-1].co = (time, scale[2]);
+        else:
+            for t in tracks:
+                t[7].keyframe_points[-1].co = (time, 1.0);
+                t[8].keyframe_points[-1].co = (time, 1.0);
+                t[9].keyframe_points[-1].co = (time, 1.0);
 
-    def _readAnimationTrack(self,stream,skeleton,bone_map,anim):
+
+    def _readAnimationTrack(self,stream,skeleton,anim):
         boneHandle = self._readShorts(stream,1)[0];
-        targetBone = bone_map[boneHandle];
-        tracks = []
-        #Creates curves for the animations of a boneHandle
-        # 0: position.x
-        # 1: position.y
-        # 2: position.z
-        # 3: rotation.w
-        # 4: rotation.x
-        # 5: rotation.y
-        # 6: rotation.z
-        # 7: scale.x
-        # 8: scale.y
-        # 9: scale.z
+        targetAnimationBones = [];
+        try:
+            targetOgreBone = self._ogreBoneMap[boneHandle];
+            targetAnimationBones = self._animationBoneMap[targetOgreBone.name];
+        except IndexError as e:
+            print("Attempt to create an animation track for a bone that doesn't exists (bone handle: " + str(boneHandle) + ")");
 
-        basename = 'pose.bones["' + targetBone.name + '"]';
-        tracks.append(anim.fcurves.new(data_path=basename+".location",index=0,action_group=targetBone.name));
-        tracks.append(anim.fcurves.new(data_path=basename+".location",index=1,action_group=targetBone.name));
-        tracks.append(anim.fcurves.new(data_path=basename+".location",index=2,action_group=targetBone.name));
-        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=0,action_group=targetBone.name));
-        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=1,action_group=targetBone.name));
-        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=2,action_group=targetBone.name));
-        tracks.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=3,action_group=targetBone.name));
-        #tracks.append(anim.fcurves.new(data_path=basename+".scale",index=0,action_group=targetBone.name));
-        #tracks.append(anim.fcurves.new(data_path=basename+".scale",index=1,action_group=targetBone.name));
-        #tracks.append(anim.fcurves.new(data_path=basename+".scale",index=2,action_group=targetBone.name));
+
+        tracks = [];
+        offset_quaternion = []
+        for b in targetAnimationBones:
+            #Creates curves for the animations of a boneHandle
+            # 0: position.x
+            # 1: position.y
+            # 2: position.z
+            # 3: rotation.w
+            # 4: rotation.x
+            # 5: rotation.y
+            # 6: rotation.z
+            # 7: scale.x
+            # 8: scale.y
+            # 9: scale.z
+            t = []
+            basename = 'pose.bones["' + b.name + '"]';
+            #t.append(anim.fcurves.new(data_path=basename+".location",index=0,action_group=b.name));
+            #t.append(anim.fcurves.new(data_path=basename+".location",index=1,action_group=b.name));
+            #t.append(anim.fcurves.new(data_path=basename+".location",index=2,action_group=b.name));
+            t.append(None); #Don't support "robotic" armatures (with translations) yet
+            t.append(None);
+            t.append(None);
+            t.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=0,action_group=b.name));
+            t.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=1,action_group=b.name));
+            t.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=2,action_group=b.name));
+            t.append(anim.fcurves.new(data_path=basename+".rotation_quaternion",index=3,action_group=b.name));
+            t.append(anim.fcurves.new(data_path=basename+".scale",index=0,action_group=b.name));
+            t.append(anim.fcurves.new(data_path=basename+".scale",index=1,action_group=b.name));
+            t.append(anim.fcurves.new(data_path=basename+".scale",index=2,action_group=b.name));
+            tracks.append(t);
+            offset_quaternion.append(self._ogreBoneMap[self._nameHandleMap[b.name]].parent_offset_rotation);
 
         self._pushInnerChunk(stream);
         streamID = self._readChunk(stream);
-        keyframe_index = 0;
         while (streamID == OgreSkeletonChunkID.SKELETON_ANIMATION_TRACK_KEYFRAME):
-            self._readKeyFrame(stream, tracks, skeleton,keyframe_index);
-            keyframe_index += 1;
+            self._readKeyFrame(stream, tracks, skeleton, anim, offset_quaternion);
             streamID = self._readChunk(stream);
         if (streamID is not None):
             self._backpedalChunkHeader(stream);
@@ -189,7 +234,9 @@ class OgreSkeletonSerializer(OgreSerializer):
 
 
 
-    def _readAnimation(self, stream, skeleton, bone_map, skeleton_object):
+    def _readAnimation(self, stream, skeleton, skeleton_object):
+        self._createAnimationBoneMap(skeleton);
+
         #name of the animation
         name = OgreSerializer.readString(stream);
         #length of the animation in seconds
@@ -208,18 +255,17 @@ class OgreSkeletonSerializer(OgreSerializer):
             baseAnimName = OgreSkeletonSerializer.readString(stream);
             baseKeyTime = self._readFloats(stream,1)[0];
             print("This animation is based on: "+baseAnimName+" (with the key time: +"+str(baseKeyTime)+")");
-            print("Warning this is not implemented");
+            print("Warning this is not implemented yet");
             #TODO code the base key frame implementation
             streamID = self._readChunk(stream);
 
         while (streamID==OgreSkeletonChunkID.SKELETON_ANIMATION_TRACK):
-            self._readAnimationTrack(stream, skeleton, bone_map, pAnim);
+            self._readAnimationTrack(stream, skeleton, pAnim);
             streamID = self._readChunk(stream);
 
         if (stream is not None):
             self._backpedalChunkHeader(stream);
         self._popInnerChunk(stream);
-
 
 
 
@@ -233,6 +279,27 @@ class OgreSkeletonSerializer(OgreSerializer):
         else:
             raise ValueError("Invalid Skeleton serializer version " + str(ver));
 
+    #grab the correct bones to animate when ogre call for the bone name
+    def getAnimationBones(ogrebone, armature):
+        for bone in armature.bones:
+            #The bone exists so grabs his childrens
+            if (bone.name == ogrebone.name):
+                return bone.children;
+        #the bone has been removed due to its 0 length
+        realbones = [];
+        for child in ogrebone.childs:
+            for bone in armature.bones:
+                if (bone.name == child.name):
+                    realbones.append(bone);
+        return realbones;
+
+
+    def _createAnimationBoneMap(self,armature):
+        self._animationBoneMap = {}
+        for ogrebone in self._ogreBoneMap.values():
+            self._animationBoneMap[ogrebone.name] = OgreSkeletonSerializer.getAnimationBones(ogrebone,armature);
+
+
     def importSkeleton(self, stream, filename=None):
         if (filename is None):
             if (hasattr(stream,'name')):
@@ -242,7 +309,11 @@ class OgreSkeletonSerializer(OgreSerializer):
             else:
                 raise ValueError("Cannot determine the filename of the stream please add filename parameter")
 
-        self.scale_fail_import = 0;
+        self._ogreBoneMap = {};
+        self._nameHandleMap = {};
+        self._animationBoneMap = {};
+        self.not_imported_bone_scales = {};
+        self.not_imported_animation_translations = set();
         self._determineEndianness(stream);
         self._readFileHeader(stream);
         self._pushInnerChunk(stream);
@@ -256,22 +327,20 @@ class OgreSkeletonSerializer(OgreSerializer):
 
         if skeleton_name in bpy.data.armatures.keys():
             raise ValueError(skeleton_name + " already exists in blender");
-        else:
-            print("Create armature from skeleton: " + skeleton_name);
-            skeleton = bpy.data.armatures.new(skeleton_name);
-            #to be able to edit the armature we need to got in edit mode.
-            skeleton_object = bpy.data.objects.new(skeleton_name, skeleton);
-            #skeleton_object.show_x_ray = True;
-            skeleton_object.animation_data_create();
-            scene = bpy.context.scene;
-            scene.objects.link(skeleton_object);
-            scene.objects.active=skeleton_object;
-            scene.update();
-            #bugged ? bpy.ops.object.object.mode_set(mode='EDIT');
-            bpy.ops.object.editmode_toggle();
+
+        print("Create armature from skeleton: " + skeleton_name);
+        skeleton = bpy.data.armatures.new(skeleton_name);
+        #to be able to edit the armature we need to got in edit mode.
+        skeleton_object = bpy.data.objects.new(skeleton_name, skeleton);
+        #skeleton_object.show_x_ray = True;
+        skeleton_object.animation_data_create();
+        scene = bpy.context.scene;
+        scene.objects.link(skeleton_object);
+        scene.objects.active=skeleton_object;
+        scene.update();
+        scene.objects.active=skeleton_object;
 
         skeleton.show_names = True;
-        bone_map = {};
 
         streamID = self._readChunk(stream);
         while (streamID is not None):
@@ -279,19 +348,27 @@ class OgreSkeletonSerializer(OgreSerializer):
                 blendMode = self._readUShorts(stream,1)[0];
                 print("Find blendMode: " + str(blendMode) + " (not used)");
             elif (streamID==OgreSkeletonChunkID.SKELETON_BONE):
-                self._readBone(stream, skeleton, bone_map);
+                assert(bpy.ops.object.mode_set(mode='EDIT')=={'FINISHED'});
+                self._readBone(stream, skeleton);
             elif (streamID==OgreSkeletonChunkID.SKELETON_BONE_PARENT):
-                self._readBoneParent(stream, skeleton, bone_map);
+                assert(bpy.ops.object.mode_set(mode='EDIT')=={'FINISHED'});
+                self._readBoneParent(stream, skeleton);
             elif (streamID==OgreSkeletonChunkID.SKELETON_ANIMATION):
-                self._readAnimation(stream,skeleton, bone_map, skeleton_object);
+                assert(bpy.ops.object.mode_set(mode='OBJECT')=={'FINISHED'});
+                self._readAnimation(stream,skeleton, skeleton_object);
             elif (streamID==OgreSkeletonChunkID.SKELETON_ANIMATION_LINK):
+                assert(bpy.ops.object.mode_set(mode='OBJECT')=={'FINISHED'});
                 self._readSkeletonAnimationLink(stream,skeleton);
 
             streamID=self._readChunk(stream);
         #TODO skeleton set binding possible
         self._popInnerChunk(stream);
-        if (self.scale_fail_import>0):
-            print("Warning: scale import is not supported yet " + str(self.scale_fail_import) + " bones may have incorrectly loaded");
+        if (len(self.not_imported_bone_scales)>0):
+            print("Warning: scale import for bones is not supported yet (" + str(len(self.not_imported_bone_scales)) + " bones may have incorrectly loaded):");
+            #print(str(self.not_imported_bone_scales));
+        if (len(self.not_imported_animation_translations)>0):
+            print("Warning: translation import for animations is not supported yet (" + str(len(self.not_imported_animation_translations)) + " animations may have incorrectly loaded)");
+            #print(str(self.not_imported_animation_translations));
 
 
 
