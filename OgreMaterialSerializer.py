@@ -4,11 +4,16 @@ import re
 import sys
 import os
 
+
+def printMaterialSerializerUsage():
+    print("usage: blender --python OgreMaterialSerializer.py -- file.material");
+
 try:
     import bpy;
 except ImportError:
     print("You need to execute this script using blender");
-    print("usage: blender --background --python OgreMaterialSerializer.py -- file.material");
+    printMaterialSerializerUsage();
+    sys.exit();
 
 try:
     from OgreSerializer import OgreSerializer
@@ -440,25 +445,13 @@ class OgreMaterialSerializer(OgreSerializer):
             print(filename + " loaded with success !")
 
 
-#use the following cmdline for test with blender
-#"blender --background --python OgreMaterialSerializer.py -- OgreMaterialSerializer.py filname.material"
-
-#if __name__ == "__main__":
-#    argv = sys.argv;
-#    argv = argv[argv.index("--")+1:];  # get all args after "--"
-#    if (len(argv) > 1):
-#        filename = argv[1];
-#        matfile = open(filename,mode='rb');
-#        matserializer = OgreMaterialSerializer();
-#        matserializer.disableValidation();
-#        matserializer.parseScript(matfile, filename);
-#    else:
-#        print("usage: python " + argv[0] + " file.material");
-#
-
 if __name__ == "__main__":
     argv = sys.argv;
-    argv = argv[argv.index("--")+1:];  # get all args after "--"
+    try:
+        argv = argv[argv.index("--")+1:];  # get all args after "--"
+    except:
+        printMaterialSerializerUsage();
+        sys.exit();
     if (len(argv) > 0):
         filename = argv[0];
         matfile = open(filename,mode='rb');
@@ -466,4 +459,4 @@ if __name__ == "__main__":
         matserializer.disableValidation();
         matserializer.parseScript(matfile, filename);
     else:
-        print("usage: blender --background --python OgreMaterialSerializer.py -- file.material");
+        printMaterialSerializerUsage();

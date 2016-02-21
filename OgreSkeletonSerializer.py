@@ -1,13 +1,19 @@
 from enum import Enum
 from io import open
 import os
+import sys
+
+
+def printSkeletonSerializerUsage():
+    print("usage: blender --python OgreSkeletonSerializer.py -- file.skeleton");
 
 try:
     import bpy;
     import mathutils;
 except ImportError:
     print("You need to execute this script using blender");
-    print("usage: blender --background --python OgreSkeletonSerializer.py -- file.skeleton");
+    printSkeletonSerializerUsage();
+    sys.exit();
 
 try:
     from OgreSkeletonFileFormat import OgreSkeletonChunkID
@@ -255,20 +261,20 @@ class OgreSkeletonSerializer(OgreSerializer):
 
 
         if skeleton_name in bpy.data.armatures.keys():
-            raise ValueError(skeleton_name + " already exists in blender");
-        else:
-            print("Create armature from skeleton: " + skeleton_name);
-            skeleton = bpy.data.armatures.new(skeleton_name);
-            #to be able to edit the armature we need to got in edit mode.
-            skeleton_object = bpy.data.objects.new(skeleton_name, skeleton);
-            #skeleton_object.show_x_ray = True;
-            skeleton_object.animation_data_create();
-            scene = bpy.context.scene;
-            scene.objects.link(skeleton_object);
-            scene.objects.active=skeleton_object;
-            scene.update();
-            #bugged ? bpy.ops.object.object.mode_set(mode='EDIT');
-            bpy.ops.object.editmode_toggle();
+            raise ValueError("Armature with name " + skeleton_name + " already exists in blender");
+
+        print("Create armature from skeleton: " + skeleton_name);
+        skeleton = bpy.data.armatures.new(skeleton_name);
+        #to be able to edit the armature we need to got in edit mode.
+        skeleton_object = bpy.data.objects.new(skeleton_name, skeleton);
+        #skeleton_object.show_x_ray = True;
+        skeleton_object.animation_data_create();
+        scene = bpy.context.scene;
+        scene.objects.link(skeleton_object);
+        scene.objects.active=skeleton_object;
+        scene.update();
+        #bugged ? bpy.ops.object.object.mode_set(mode='EDIT');
+        bpy.ops.object.editmode_toggle();
 
         skeleton.show_names = True;
         bone_map = {};
@@ -283,6 +289,10 @@ class OgreSkeletonSerializer(OgreSerializer):
             elif (streamID==OgreSkeletonChunkID.SKELETON_BONE_PARENT):
                 self._readBoneParent(stream, skeleton, bone_map);
             elif (streamID==OgreSkeletonChunkID.SKELETON_ANIMATION):
+                if (self.scale_fail_import>0):
+                    print("Warning: scale import is not supported yet " + str(self.scale_fail_import) + " bones may have incorrectly loaded");
+                print("Warning: animations are not supported at the moment see the head_tail_experiment branch for partial support (https://github.com/lamogui/ogre_blender_importer/tree/head_tail_experiment)");
+                return;
                 self._readAnimation(stream,skeleton, bone_map, skeleton_object);
             elif (streamID==OgreSkeletonChunkID.SKELETON_ANIMATION_LINK):
                 self._readSkeletonAnimationLink(stream,skeleton);
@@ -297,7 +307,12 @@ class OgreSkeletonSerializer(OgreSerializer):
 
 if __name__ == "__main__":
     argv = sys.argv;
-    argv = argv[argv.index("--")+1:];  # get all args after "--"
+    try:
+        argv = argv[argv.index("--")+1:];  # get all args after "--"
+    except:
+        printSkeletonSerializerUsage();
+        sys.exit();
+
     if (len(argv) > 0):
         filename = argv[0];
         skeletonfile = open(filename,mode='rb');
@@ -306,4 +321,4 @@ if __name__ == "__main__":
         skeletonserializer.setWorkingVersion(OgreSkeletonVersion.SKELETON_VERSION_LATEST);
         skeletonserializer.importSkeleton(skeletonfile);
     else:
-        print("usage: blender --background --python OgreSkeletonSerializer.py -- file.skeleton");
+        printSkeletonSerializerUsage();

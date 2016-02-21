@@ -1,8 +1,31 @@
-from OgreMeshSerializerImpl import *
-from OgreSerializer import OgreSerializer
-from OgreMeshVersion import OgreMeshVersion
+
 from io import IOBase
 from io import SEEK_SET
+import sys
+import os
+
+def printMeshSerializerUsage():
+    print("usage: blender --python OgreMeshSerializer.py -- file.mesh");
+
+try:
+    import bpy;
+    import mathutils;
+except ImportError:
+    print("You need to execute this script using blender");
+    printMeshSerializerUsage();
+
+try:
+    from OgreMeshSerializerImpl import *
+    from OgreSerializer import OgreSerializer
+    from OgreMeshVersion import OgreMeshVersion
+    from OgreMesh import OgreMesh
+
+except ImportError as e:
+    print("Import error: " + str(e) + " manual compilation" );
+    srcfile="OgreMeshSerializerImpl.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreSerializer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreMeshVersion.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreMesh.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
 
 class OgreMeshSerializer(OgreSerializer):
     """
@@ -44,11 +67,26 @@ class OgreMeshSerializer(OgreSerializer):
         self._versionData = [];
         self._versionData.append(OgreMeshSerializer._MeshVersionData(OgreMeshVersion.MESH_VERSION_1_10, "[MeshSerializer_v1.100]",OgreMeshSerializerImpl()));
 
-    def importMesh(self, stream, mesh):
+    def importMesh(self, stream, filename=None):
         assert(issubclass(type(stream),IOBase));
+
+        #Check mesh name validity
+        if (filename is None):
+            if (hasattr(stream,'name')):
+                filename = stream.name;
+            elif (hasattr(stream, 'filename')):
+                filename = stream.filename;
+            else:
+                raise ValueError("Cannot determine the filename of the stream please add filename parameter")
+
+        filename = os.path.basename(filename);
+        mesh_name = os.path.splitext(filename)[0];
+        if mesh_name in bpy.data.meshes.keys():
+            raise ValueError("Mesh with name " + mesh_name + " already exists in blender");
+
+        #Check header and select impl
         self._determineEndianness(stream);
         headerID = self._readUShorts(stream,1)[0];
-        print(str(headerID) + " check is " + str(OgreMeshSerializer.HEADER_CHUNK_ID));
         if (headerID != OgreMeshSerializer.HEADER_CHUNK_ID):
             raise ValueError("File header not found");
         ver = OgreSerializer.readString(stream);
@@ -62,11 +100,18 @@ class OgreMeshSerializer(OgreSerializer):
             print(ver);
             raise ValueError("Cannot find serializer implementation for "
                              "mesh version " + ver);
+
+        #Create the blender mesh and import the mesh
+        mesh = OgreMesh(mesh_name);
         impl.importMesh(stream,mesh,self.listener);
+
+        #Check if newer version
         if (ver != self._versionData[0].versionString):
-            print("WARNING: "
+            print("Warning: "
                   " older format (" + ver + "); you should upgrade it as soon as possible" +
                   " using the OgreMeshUpgrade tool.");
+
+        #Probably useless
         if (self.listener is not None):
             listener.processMeshCompleted(mesh);
 
@@ -81,21 +126,19 @@ class OgreMeshSerializer(OgreSerializer):
         for i in self._versionData:
             i.impl.disableValidation();
 
-
 if __name__ == "__main__":
-    import sys
-    from io import open
+    argv = sys.argv;
+    try:
+        argv = argv[argv.index("--")+1:];  # get all args after "--"
+    except:
+        printMeshSerializerUsage();
+        sys.exit();
 
-    class OgreMesh:
-        def __init__(self):
-            self.sharedVertexData = None;
-
-    if (len(sys.argv) > 1):
-        filename = sys.argv[1];
+    if (len(argv) > 0):
+        filename = argv[0];
         meshfile = open(filename,mode='rb');
-        meshSerializer = OgreMeshSerializer();
-        meshSerializer.disableValidation();
-        mesh = OgreMesh();
-        meshSerializer.importMesh(meshfile,mesh);
+        meshserializer = OgreMeshSerializer();
+        meshserializer.disableValidation();
+        meshserializer.importMesh(meshfile);
     else:
-        print("usage: python " + sys.argv[0] + " file.mesh");
+        printMeshSerializerUsage();

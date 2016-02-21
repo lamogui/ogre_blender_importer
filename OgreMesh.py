@@ -1,4 +1,10 @@
-from OgreSubMesh import OgreSubMesh
+try:
+    from OgreSubMesh import OgreSubMesh
+
+except ImportError as e:
+    print("Import error: " + str(e) + " manual compilation" );
+    srcfile="OgreSubMesh.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+
 
 class OgreMesh:
     """
@@ -35,14 +41,25 @@ class OgreMesh:
         share the same scene node as the parent.
     """
     def __init__(self,name):
-        self.name = name;
         self._subMeshList = [];
+        self._blender_mesh = bpy.data.meshes.new(name);
+        self.skeletonName = "";
 
+    
+
+    @property
+    def name(self):
+        return self.blender_mesh.name;
+
+    @property
+    def blender_mesh(self):
+        return self._blender_mesh;
 
     def createSubMesh(self, name=None):
-        sub = OgreSubMesh();
-        sub.parent = self;
+        sub = OgreSubMesh(self);
         self._subMeshList.append(sub);
 
         if name is not None:
             raise NotImplementedError;
+
+        return sub;

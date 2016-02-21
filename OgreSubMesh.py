@@ -1,4 +1,11 @@
 
+try:
+    from OgreVertexIndexData import *
+except ImportError as e:
+    print("Import error: " + str(e) + " manual compilation" );
+    srcfile="OgreVertexIndexData.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+
+
 
 class OgreSubMesh:
     """
@@ -15,6 +22,9 @@ class OgreSubMesh:
             their material differences on a per-object basis if required.
             See the SubEntity class for more information.
     """
-    def __init__(self):
-        self.parent = None;
-        pass;
+    def __init__(self, parent):
+        self.parent = parent;
+        self.useSharedVertices = True;
+        self.indexData = OgreIndexData();
+        self.vertexData = parent.sharedVertexData;
+        self.materialName = "";

@@ -1,5 +1,11 @@
 from enum import IntEnum;
-from OgreHardwareBuffer import OgreFakeHardwareBuffer
+
+try:
+    from OgreHardwareBuffer import OgreFakeHardwareBuffer
+except ImportError as e:
+    print("Import error: " + str(e) + " manual compilation" );
+    srcfile="OgreHardwareBuffer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+
 
 class OgreVertexBuffer(OgreFakeHardwareBuffer):
     """
