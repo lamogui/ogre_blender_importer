@@ -1,4 +1,4 @@
-### Ogre Blender Importer
+# Ogre Blender Importer
 Ogre files importer (.mesh/.skeleton/.material) blender addon
 
 The objective of this project is to recode the c++ class from ogre:
@@ -14,21 +14,21 @@ Currently you need to use addon "manually" using a terminal or powershell (so yo
 Note that is early dev code so number of feature are missing.
 
 
-#Material (.material)
+###Material (.material)
 ```
 blender --python OgreMaterialSerializer.py -- file.material
 ```
 Currently import simple things like Diffuse/Ambiant/Specular but also textures.
-Textures are automatically loaded 
+Textures are automatically loaded
 
-#Skeleton (.skeleton)
+###Skeleton (.skeleton)
 ```
 blender --python OgreSkeletonSerializer.py -- file.skeleton
 ```
 Currently import armature only. For animations check the branch head_tail_experiment
 for import animation (incorrectly).
 
-#Mesh (.mesh)
+###Mesh (.mesh)
 ```
 blender --python OgreMeshSerializer.py -- file.mesh
 ```
@@ -41,7 +41,7 @@ Translate the code of Ogre::MeshSerializer, Ogre::SkeletonSerializer and
 Ogre::MaterialSerializer into python3 for blender (bpy).
 
 
-#TODO
+###TODO
  * Correctly load animations (maths are buggy at the moment view head_tail_experiment branch)
  * Support scale import for bone
  * Import more .material parameters
