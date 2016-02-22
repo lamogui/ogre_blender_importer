@@ -1,6 +1,7 @@
 import bpy
 import mathutils
 import io;
+from struct import unpack_from;
 
 try:
     from OgreSerializer import OgreSerializer
@@ -102,7 +103,7 @@ class OgreMeshSerializerImpl(OgreSerializer):
             raise ValueError("OgreMeshSerializerImpl._readGeometryVertexBuffer: Buffer vertex size does not agree with vertex declarationBuffer vertex size does not agree with vertex declaration");
 
         if (OgreSerializer.Endian.ENDIAN_NATIVE != self._endianness):
-            raise NotImplementedError;
+            raise NotImplementedError("TODO Implement read data for endianness different of native endianness");
         else:
             hb = OgreVertexBuffer(vertexSize,dest.vertexCount);
             hb.data = stream.read(dest.vertexCount*vertexSize);
@@ -148,6 +149,22 @@ class OgreMeshSerializerImpl(OgreSerializer):
                 self._backpedalChunkHeader(stream);
             self._popInnerChunk(stream);
 
+
+            positions = dest.vertexDeclaration.findElementsBySemantic(OgreVertexElementSemantic.VES_POSITION);
+            assert(len(positions)==1);
+            p=positions[0];
+            if (p.getType() == OgreVertexElementType.VET_FLOAT3):
+                buf = dest.vertexBufferBinding.getBuffer(p.source);
+                assert(buf.vertexSize == 3*4);
+                data = buf.data[p.offset:];
+                for i in range(buf.numVertices):
+                    v = unpack_from("=fff",data,i*3*4);
+                    dest.positions.append(v);
+            else:
+                raise ValueError("Can't load position with value other than floats");
+
+
+
     def _readSubMeshOperation(self, stream, mesh, submesh, pstr_indent_lvl):
         str_indent_lvl = pstr_indent_lvl + "  ";
         opType = self._readShorts(stream,1)[0];
@@ -178,7 +195,7 @@ class OgreMeshSerializerImpl(OgreSerializer):
         print(str_indent_lvl + "Index 32 bits: " + str(idx32bit));
 
         if (submesh.indexData.indexCount > 0):
-            if (idx32bit):
+            if (idx32bit==True):
                 submesh.indexData.data = self._readUInts(stream,submesh.indexData.indexCount);
             else:
                 submesh.indexData.data = self._readUShorts(stream,submesh.indexData.indexCount);
@@ -195,7 +212,8 @@ class OgreMeshSerializerImpl(OgreSerializer):
             submesh.vertexData = OgreVertexData();
             print(str_indent_lvl + "M_GEOMETRY");
             self._readGeometry(stream,mesh,submesh.vertexData,str_indent_lvl);
-            raise NotImplementedError("TODO Implement support for submesh not using sharedVertexData"); #Don't support this at the moment I hop it's not commonly used
+            print("Warning: I never tested the behavior with this configuration");
+            #raise NotImplementedError("TODO Implement support for submesh not using sharedVertexData"); #Don't support this at the moment I hop it's not commonly used
 
 
         try:
@@ -227,6 +245,13 @@ class OgreMeshSerializerImpl(OgreSerializer):
 
         self._popInnerChunk(stream);
 
+        submesh.indexData.indexes = [];
+        for i in range(0,submesh.indexData.indexCount,3):
+            idx = (int(submesh.indexData.data[i]), int(submesh.indexData.data[i+1]), int(submesh.indexData.data[i+2]));
+            submesh.indexData.indexes.append(idx);
+        print(str_indent_lvl + "Vertices: " +  str(len(submesh.vertexData.positions)));
+        print(str_indent_lvl + "Faces: " + str(len(submesh.indexData.indexes)));
+        mesh.blender_mesh.from_pydata(submesh.vertexData.positions, [], submesh.indexData.indexes);
 
 
     def _readSkeletonLink(self,stream,mesh,listener):
@@ -341,8 +366,10 @@ class OgreMeshSerializerImpl(OgreSerializer):
 
             if (not isManual):
                 self._readEdgetListLodInfo(stream,None);
-
-            streamID = self._readChunk(stream);
+            try:
+                streamID = self._readChunk(stream);
+            except EOFError:
+                eof = True;
 
         if (not eof):
             self._backpedalChunkHeader(stream);
@@ -429,6 +456,12 @@ class OgreMeshSerializerImpl(OgreSerializer):
                 self._backpedalChunkHeader(stream);
             self._popInnerChunk(stream);
 
+            #If the mesh didn't link with any other objects of the scene create it
+            mesh.blender_mesh.update();
+            if (mesh.blender_object is None):
+                mesh.blender_object = bpy.data.objects.new(mesh.name,mesh.blender_mesh);
+                scene = bpy.context.scene;
+                scene.objects.link(mesh.blender_object);
 
     def importMesh(self, stream, mesh, listener=None):
         self._determineEndianness(stream);
@@ -447,5 +480,5 @@ class OgreMeshSerializerImpl(OgreSerializer):
             try:
                 streamID = self._readChunk(stream);
             except EOFError as e:
-                print("Legit end of file (no more chunks) at " + str(stream.tell()) + " exception message:" + e.message);
+                print("Legit end of file (no more chunks) at " + str(stream.tell()));
                 eof = True;

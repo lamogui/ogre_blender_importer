@@ -44,8 +44,8 @@ class OgreMesh:
         self._subMeshList = [];
         self._blender_mesh = bpy.data.meshes.new(name);
         self.skeletonName = "";
+        self.blender_object = None;
 
-    
 
     @property
     def name(self):

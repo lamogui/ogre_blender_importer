@@ -390,6 +390,13 @@ class OgreVertexDeclaration:
                 return e;
         return None;
 
+    def findElementsBySemantic(self,sem):
+        elements = []
+        for e in self._elementList:
+            if (e.semantic == sem):
+                elements.append(e);
+        return elements;
+
     def findElementBySource(self,source):
         return [e for e in self._elementList if e.source == source];
 
@@ -433,6 +440,9 @@ class OgreVertexBufferBinding:
 
     def setBinding(self, index, vbuffer):
         self._bindingMap[str(index)]=vbuffer;
+
+    def getBuffer(self, source):
+        return self._bindingMap[str(source)];
 
     def unsetAllBindings(self):
         self._bindingMap = {};

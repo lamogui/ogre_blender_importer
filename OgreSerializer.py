@@ -68,6 +68,8 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count);
+        if (len(readed) != count):
+            raise EOFError;
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("?"*count), readed);
         else:
@@ -77,6 +79,8 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*4);
+        if (len(readed) != count*4):
+            raise EOFError;
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("f"*count), readed);
         else:
@@ -86,6 +90,8 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*8);
+        if (len(readed) != count*8):
+            raise EOFError;
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("d"*count), readed);
         else:
@@ -95,6 +101,8 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*2);
+        if (len(readed) != count*2):
+            raise EOFError;
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("h"*count), readed);
         else:
@@ -104,8 +112,9 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*2);
-        if (len(readed) != 2):
-            return None;
+        if (len(readed) != count*2):
+            raise EOFError;
+
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("H"*count), readed);
         else:
@@ -115,6 +124,8 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*4);
+        if (len(readed) != count*4):
+            raise EOFError;
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("i"*count), readed);
         else:
@@ -124,6 +135,8 @@ class OgreSerializer:
         assert(issubclass(type(stream),IOBase));
         assert(type(count) is int and count > 0);
         readed = stream.read(count*4);
+        if (len(readed) != count*4):
+            raise EOFError;
         if self._endianness==OgreSerializer.Endian.ENDIAN_LITTLE:
             return unpack("<" + ("I"*count), readed);
         else:
@@ -177,17 +190,13 @@ class OgreSerializer:
     def _readChunk(self, stream):
         assert(issubclass(type(stream),IOBase));
         pos = stream.tell();
-        try:
-            chunkid = self._readUShorts(stream,1)[0];
-            self._currentstreamLen = self._readUInts(stream,1)[0];
-            if (self._chunkSizeStack):
-                if (pos != self._chunkSizeStack[-1] and self._reportChunkError):
-                    print("Corrupted chunk detected ! Chunk ID: " + str(chunkid));
+        chunkid = self._readUShorts(stream,1)[0];
+        self._currentstreamLen = self._readUInts(stream,1)[0];
+        if (self._chunkSizeStack):
+            if (pos != self._chunkSizeStack[-1] and self._reportChunkError):
+                print("Corrupted chunk detected ! Chunk ID: " + str(chunkid));
                 self._chunkSizeStack[-1] = pos + self._currentstreamLen;
-            return chunkid;
-        except (EOFError, IndexError, TypeError) as e:
-            print("End of file no more chunks");
-            return None;
+        return chunkid;
 
     def _readVector3(self,stream):
         return self._readFloats(stream,3);

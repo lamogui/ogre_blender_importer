@@ -20,6 +20,7 @@ blender --python OgreMaterialSerializer.py -- file.material
 ```
 Currently import simple things like Diffuse/Ambiant/Specular but also textures.
 Textures are automatically loaded
+No support at all for CYCLES
 
 ###Skeleton (.skeleton)
 ```
@@ -32,12 +33,13 @@ for import animation (incorrectly).
 ```
 blender --python OgreMeshSerializer.py -- file.mesh
 ```
-Currently import nothing, but capable of reading some files entirely
+Currently import mesh (only vertex positions and faces). No link with skeleton/materials.
+One object is created per mesh (not submesh).
 
 
 ##How to contribute
 Go to https://bitbucket.org/sinbad/ogre/src
-Translate the code of Ogre::MeshSerializer, Ogre::SkeletonSerializer and
+Translate the code of Ogre::MeshSerializer, Ogre::SkeletonSerializerImpl and
 Ogre::MaterialSerializer into python3 for blender (bpy).
 
 
