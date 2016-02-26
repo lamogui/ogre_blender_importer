@@ -3,8 +3,9 @@ from enum import IntEnum;
 try:
     from OgreHardwareBuffer import OgreFakeHardwareBuffer
 except ImportError as e:
+    directory = os.path.dirname(os.path.realpath(__file__));
     print("Import error: " + str(e) + " manual compilation" );
-    srcfile="OgreHardwareBuffer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreHardwareBuffer.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
 
 
 class OgreVertexBuffer(OgreFakeHardwareBuffer):

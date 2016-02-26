@@ -21,10 +21,11 @@ try:
     from OgreBone import OgreBone
 
 except ImportError as e:
+    directory = os.path.dirname(os.path.realpath(__file__));    
     print("Import error: " + str(e) + " manual compilation" );
-    srcfile="OgreSkeletonFileFormat.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreSerializer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreBone.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreSkeletonFileFormat.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreSerializer.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreBone.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
 
 class OgreSkeletonVersion(IntEnum):
     #/// OGRE version v1.0+

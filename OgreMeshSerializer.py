@@ -21,11 +21,12 @@ try:
     from OgreMesh import OgreMesh
 
 except ImportError as e:
+    directory = os.path.dirname(os.path.realpath(__file__));
     print("Import error: " + str(e) + " manual compilation" );
-    srcfile="OgreMeshSerializerImpl.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreSerializer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreMeshVersion.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreMesh.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreMeshSerializerImpl.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreSerializer.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreMeshVersion.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreMesh.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
 
 class OgreMeshSerializer(OgreSerializer):
     """

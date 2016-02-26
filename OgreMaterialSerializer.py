@@ -20,9 +20,10 @@ try:
     from OgreStringUtils import OgreStringUtils
 
 except ImportError as e:
+    directory = os.path.dirname(os.path.realpath(__file__));
     print("Import error: " + str(e) + " manual compilation" );
-    srcfile="OgreSerializer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreStringUtils.py";exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreSerializer.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreStringUtils.py";exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
 
 #Enumerates the types of programs which can run on the GPU.
 class OgreGpuProgramType(Enum):

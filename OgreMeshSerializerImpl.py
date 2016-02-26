@@ -11,12 +11,13 @@ try:
     from OgreHardwareBuffer import *
 
 except ImportError as e:
+    directory = os.path.dirname(os.path.realpath(__file__));    
     print("Import error: " + str(e) + " manual compilation" );
-    srcfile="OgreSerializer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreVertexIndexData.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreVertexBuffer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreMeshFileFormat.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
-    srcfile="OgreHardwareBuffer.py"; exec(compile(open(srcfile).read(), srcfile, 'exec'))
+    srcfile="OgreSerializer.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreVertexIndexData.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreVertexBuffer.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreMeshFileFormat.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
+    srcfile="OgreHardwareBuffer.py"; exec(compile(open(os.path.join(directory,srcfile)).read(), srcfile, 'exec'))
 
 
 class OgreMeshSerializerImpl(OgreSerializer):
