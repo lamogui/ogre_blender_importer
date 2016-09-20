@@ -67,7 +67,9 @@ class OgreMeshSerializer(OgreSerializer):
         self.listener=None;
         self._versionData = [];
         self._versionData.append(OgreMeshSerializer._MeshVersionData(OgreMeshVersion.MESH_VERSION_1_10, "[MeshSerializer_v1.100]",OgreMeshSerializerImpl()));
-
+        self._versionData.append(OgreMeshSerializer._MeshVersionData(OgreMeshVersion.MESH_VERSION_1_8, "[MeshSerializer_v1.8]",OgreMeshSerializerImpl_v1_8()));
+        
+        
     def importMesh(self, stream, filename=None):
         assert(issubclass(type(stream),IOBase));
 

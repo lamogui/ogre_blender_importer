@@ -483,3 +483,15 @@ class OgreMeshSerializerImpl(OgreSerializer):
             except EOFError as e:
                 print("Legit end of file (no more chunks) at " + str(stream.tell()));
                 eof = True;
+                
+class OgreMeshSerializerImpl_v1_8(OgreMeshSerializerImpl):
+    """
+    Class for providing backwards-compatibility for loading version 1.8 of the .mesh format. 
+    This mesh format was used from Ogre v1.8.
+    """
+    
+    def __init__(self):
+        OgreMeshSerializerImpl.__init__(self);
+        self._version = "[MeshSerializer_v1.8]";
+        
+    
