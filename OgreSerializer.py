@@ -39,6 +39,10 @@ class OgreSerializer:
         self._reportChunkError=True;
         self._chunkSizeStack=[];
         self._currentstreamLen=0;
+        
+    @property
+    def endianness(self):
+        return self._endianness;
 
     def _determineEndianness(self,param):
         if issubclass(type(param), IOBase):

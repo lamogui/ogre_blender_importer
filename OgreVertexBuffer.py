@@ -1,4 +1,5 @@
 from enum import IntEnum;
+from struct import unpack_from;
 
 try:
     from OgreHardwareBuffer import OgreFakeHardwareBuffer
@@ -309,6 +310,43 @@ class OgreVertexElement:
               t==OgreVertexElementType.VET_UINT4):
             return 4;
         raise ValueError("OgreVertexElement.getTypeCount(type): Invalid type");
+        
+    def getTypePythonUnpackStr(t):
+        if (t==OgreVertexElementType.VET_COLOUR or \
+            t==OgreVertexElementType.VET_COLOUR_ABGR or \
+            t==OgreVertexElementType.VET_COLOUR_ARGB):
+            raise ValueError("OgreVertexElement.getTypePythonUnpackStr(type): Color unsupported yet");
+        elif (t==OgreVertexElementType.VET_FLOAT1 or \
+              t==OgreVertexElementType.VET_FLOAT2 or \
+              t==OgreVertexElementType.VET_FLOAT3 or \
+              t==OgreVertexElementType.VET_FLOAT4):
+            return 'f' * OgreVertexElement.getTypeCount(t);
+        elif (t==OgreVertexElementType.VET_DOUBLE1 or \
+              t==OgreVertexElementType.VET_DOUBLE2 or \
+              t==OgreVertexElementType.VET_DOUBLE3 or \
+              t==OgreVertexElementType.VET_DOUBLE4):
+            return 'd' * OgreVertexElement.getTypeCount(t);        
+        elif (t==OgreVertexElementType.VET_SHORT1 or \
+              t==OgreVertexElementType.VET_SHORT2 or \
+              t==OgreVertexElementType.VET_SHORT3 or \
+              t==OgreVertexElementType.VET_SHORT4):
+            return 'h' * OgreVertexElement.getTypeCount(t); 
+        elif (t==OgreVertexElementType.VET_USHORT1 or \
+              t==OgreVertexElementType.VET_USHORT2 or \
+              t==OgreVertexElementType.VET_USHORT3 or \
+              t==OgreVertexElementType.VET_USHORT4):
+            return 'H' * OgreVertexElement.getTypeCount(t);      
+        elif (t==OgreVertexElementType.VET_INT1 or \
+              t==OgreVertexElementType.VET_INT2 or \
+              t==OgreVertexElementType.VET_INT3 or \
+              t==OgreVertexElementType.VET_INT4):
+            return 'i' * OgreVertexElement.getTypeCount(t); 
+        elif (t==OgreVertexElementType.VET_UINT1 or \
+              t==OgreVertexElementType.VET_UINT2 or \
+              t==OgreVertexElementType.VET_UINT3 or \
+              t==OgreVertexElementType.VET_UINT4):
+            return 'I' * OgreVertexElement.getTypeCount(t); 
+        raise ValueError("OgreVertexElement.getTypePythonUnpackStr(type): Invalid type");
 
     def getBestCoulourVertexElementType():
         #Blender use opengl
@@ -324,9 +362,28 @@ class OgreVertexElement:
         else:
             return False;
 
-
     def getSize(self):
         return OgreVertexElement.getTypeSize(self._type);
+        
+    def extractFromBuffer(self, vertexBufferBinding, dest, endianess):
+        buf = vertexBufferBinding.getBuffer(self.source);
+        cmd = "";
+        #FIXME: endianess not working...
+        #if (endianess.value == 'big'):
+        #  cmd = '<';
+        #elif (endianess.value == 'little'):
+        #  cmd = '>';
+        #else :
+        #  cmd = endianess;
+        #assert(cmd == '<' or cmd == '>');
+        cmd = "="
+        cmd = cmd + OgreVertexElement.getTypePythonUnpackStr(self.getType());
+        print(cmd);
+        data = buf.data[self.offset:]
+        for i in range(buf.numVertices):
+          v = unpack_from(cmd, data, i * buf.vertexSize);
+          dest.append(v);
+        
 
 class OgreVertexDeclaration:
     """

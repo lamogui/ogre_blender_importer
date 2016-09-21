@@ -50,8 +50,8 @@ class OgreMeshSerializerImpl(OgreSerializer):
         source = self._readUShorts(stream,1)[0]; #Buffer ogre correspondant ?
         vType = self._readUShorts(stream,1)[0];  #Type de valeur
         vSemantic = self._readUShorts(stream, 1)[0]; #Utilité du vertex
-        offset = self._readUShorts(stream, 1)[0]; #always 0 ?
-        index = self._readUShorts(stream, 1)[0];  #always 0 ?
+        offset = self._readUShorts(stream, 1)[0]; #offset si les buffer sont entrelaces
+        index = self._readUShorts(stream, 1)[0];  #index du buffer utilise ?
         dest.vertexDeclaration.addElement(source,offset,vType,vSemantic, index)
         print(str_indent_lvl + "source: " + str(source));
         print(str_indent_lvl + "type: " + OgreVertexElementType.toStr(vType));
@@ -151,19 +151,11 @@ class OgreMeshSerializerImpl(OgreSerializer):
             self._popInnerChunk(stream);
 
 
-            positions = dest.vertexDeclaration.findElementsBySemantic(OgreVertexElementSemantic.VES_POSITION);
-            assert(len(positions)==1);
-            p=positions[0];
-            if (p.getType() == OgreVertexElementType.VET_FLOAT3):
-                buf = dest.vertexBufferBinding.getBuffer(p.source);
-                assert(buf.vertexSize == 3*4);
-                data = buf.data[p.offset:];
-                for i in range(buf.numVertices):
-                    v = unpack_from("=fff",data,i*3*4);
-                    dest.positions.append(v);
-            else:
-                raise ValueError("Can't load position with value other than floats");
-
+            positionElements = dest.vertexDeclaration.findElementsBySemantic(OgreVertexElementSemantic.VES_POSITION);
+            assert(len(positionElements)==1); #FIXME: I don't know how to handle multiple position for now
+            pe=positionElements[0];
+            assert(OgreVertexElement.getTypeCount(pe.getType()) == 3); # if != 3 cannot be interpreted like a position
+            pe.extractFromBuffer(dest.vertexBufferBinding, dest.positions, self.endianness);
 
 
     def _readSubMeshOperation(self, stream, mesh, submesh, pstr_indent_lvl):
