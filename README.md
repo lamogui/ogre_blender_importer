@@ -6,7 +6,7 @@ Ogre::MeshSerializer, Ogre::SkeletonSerializer and Ogre::MaterialSerializer
 as interface between binary Ogre files (.mesh, .skeleton and .material) and
 blender.
 
-##How to install
+## How to install
 
 git clone this repo inside your "script/addon" directory of blender (in AppData or Program Files)
 
@@ -16,7 +16,7 @@ then activate the addon in blender
 
 > File > User Preferences > Add-ons > Ogre Blender Importer
 
-##How to use
+## How to use
 Note that is early dev code so number of features are missing.
 
 Currently you can only load (.mesh) from the graphical interface and there is many limitations:
@@ -27,10 +27,10 @@ Currently you can only load (.mesh) from the graphical interface and there is ma
 
 Some experimental code is available to load .material and .skeleton see below
 
-##Manual usage
+## Manual usage
 You can to use addon "manually" using a terminal or powershell (so you need to add blender to PATH).
 
-###Material (.material)
+### Material (.material)
 ```
 blender --python OgreMaterialSerializer.py -- file.material
 ```
@@ -38,27 +38,27 @@ Currently import simple things like Diffuse/Ambiant/Specular but also textures.
 Textures are automatically loaded
 No support at all for CYCLES
 
-###Skeleton (.skeleton)
+### Skeleton (.skeleton)
 ```
 blender --python OgreSkeletonSerializer.py -- file.skeleton
 ```
 Currently import armature only. For animations check the branch head_tail_experiment
 for import animation (incorrectly).
 
-###Mesh (.mesh)
+### Mesh (.mesh)
 ```
 blender --python OgreMeshSerializer.py -- file.mesh
 ```
 Currently import mesh (only vertex positions and faces). No link with skeleton/materials.
 One object is created per mesh (not submesh).
 
-##How to contribute
+## How to contribute
 Go to https://bitbucket.org/sinbad/ogre/src
 Translate the code of Ogre::MeshSerializer, Ogre::SkeletonSerializerImpl and
 Ogre::MaterialSerializer into python3 for blender (bpy).
 
 
-###TODO
+### TODO
  * Correctly load animations (maths are buggy at the moment view head_tail_experiment branch)
  * Support scale import for bone
  * Import more .material parameters
